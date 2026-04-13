@@ -3,14 +3,18 @@ import {
   DRUGS,
   DRUGS_BY_ID,
   GAME_CONFIG,
+  SCORE_TIERS,
 } from './content'
 import type {
+  ActivityItem,
+  ActivityKind,
   CityId,
   DrugId,
   GameState,
   MarketOffer,
   MarketTrigger,
   NewsTone,
+  RunSummary,
 } from './types'
 
 function randomInt(min: number, max: number) {
@@ -29,6 +33,15 @@ function shuffle<T>(items: T[]) {
   }
 
   return shuffled
+}
+
+function formatMoney(value: number) {
+  const absolute = Math.abs(value).toLocaleString()
+  return value < 0 ? `-$${absolute}` : `$${absolute}`
+}
+
+function createRunId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 function createInventoryRecord() {
@@ -75,6 +88,53 @@ function applyNews(
     ...state,
     newsCursor: state.newsCursor + stamped.length,
     news: [...stamped, ...state.news].slice(0, GAME_CONFIG.newsLimit),
+  }
+}
+
+function applyActivity(
+  state: GameState,
+  entries: Array<Omit<ActivityItem, 'id'>>,
+) {
+  if (entries.length === 0) {
+    return state
+  }
+
+  const stamped = entries
+    .map((entry, index) => ({
+      ...entry,
+      id: state.activityCursor + index,
+    }))
+    .reverse()
+
+  return {
+    ...state,
+    activityCursor: state.activityCursor + stamped.length,
+    activity: [...stamped, ...state.activity].slice(0, GAME_CONFIG.activityLimit),
+  }
+}
+
+function applyUpdates(
+  state: GameState,
+  updates: {
+    news?: Array<{ tone: NewsTone; text: string }>
+    activity?: Array<Omit<ActivityItem, 'id'>>
+  },
+) {
+  const withNews = applyNews(state, updates.news ?? [])
+  return applyActivity(withNews, updates.activity ?? [])
+}
+
+function createActivity(
+  state: GameState,
+  kind: ActivityKind,
+  title: string,
+  detail: string,
+): Omit<ActivityItem, 'id'> {
+  return {
+    day: state.day,
+    kind,
+    title,
+    detail,
   }
 }
 
@@ -147,6 +207,8 @@ function buildMarket(cityId: CityId) {
 export function createNewGame(): GameState {
   const { market, bulletins } = buildMarket(GAME_CONFIG.startingCityId)
   const initialState: GameState = {
+    runId: createRunId(),
+    createdAt: new Date().toISOString(),
     day: 1,
     endDay: GAME_CONFIG.endDay,
     debt: GAME_CONFIG.startingDebt,
@@ -160,15 +222,27 @@ export function createNewGame(): GameState {
     market,
     news: [],
     newsCursor: 0,
+    activity: [],
+    activityCursor: 0,
   }
 
-  return applyNews(initialState, [
-    {
-      tone: 'system',
-      text: 'Fresh off the curb in Lawrenceville. Thirty days to stack cash.',
-    },
-    ...bulletins,
-  ])
+  return applyUpdates(initialState, {
+    news: [
+      {
+        tone: 'system',
+        text: 'Fresh off the curb in Lawrenceville. Thirty days to stack cash.',
+      },
+      ...bulletins,
+    ],
+    activity: [
+      createActivity(
+        initialState,
+        'run',
+        'Run started',
+        `Opened the Gwinnett run with ${formatMoney(initialState.cash)} cash and ${formatMoney(initialState.debt)} in debt.`,
+      ),
+    ],
+  })
 }
 
 export function getCurrentCity(state: GameState) {
@@ -184,6 +258,18 @@ export function getUsedSpace(state: GameState) {
 
 export function getAvailableSpace(state: GameState) {
   return state.totalSpace - getUsedSpace(state)
+}
+
+export function getInventoryValue(state: GameState) {
+  return DRUGS.reduce((total, drug) => {
+    const offer = state.market[drug.id]
+
+    if (!offer.available) {
+      return total
+    }
+
+    return total + state.inventory[drug.id] * offer.price
+  }, 0)
 }
 
 export function getMaxBuyQuantity(state: GameState, drugId: DrugId) {
@@ -207,37 +293,79 @@ export function getMaxSellQuantity(state: GameState, drugId: DrugId) {
   return state.inventory[drugId]
 }
 
+export function getMaxDepositAmount(state: GameState) {
+  return state.cash
+}
+
+export function getMaxWithdrawAmount(state: GameState) {
+  return state.bankDeposit
+}
+
+export function getMaxDebtPayment(state: GameState) {
+  return Math.min(state.cash, state.debt)
+}
+
+export function getMaxBorrowAmount(state: GameState) {
+  return Math.max(GAME_CONFIG.maxDebt - state.debt, 0)
+}
+
 export function getNetWorth(state: GameState) {
-  const inventoryValue = DRUGS.reduce((total, drug) => {
-    const offer = state.market[drug.id]
+  return state.cash + state.bankDeposit + getInventoryValue(state) - state.debt
+}
 
-    if (!offer.available) {
-      return total
-    }
+export function getScoreTier(score: number) {
+  return (
+    SCORE_TIERS.find((tier) => score >= tier.threshold) ??
+    SCORE_TIERS[SCORE_TIERS.length - 1]
+  )
+}
 
-    return total + state.inventory[drug.id] * offer.price
-  }, 0)
+export function buildRunSummary(state: GameState): RunSummary {
+  const score = getNetWorth(state)
 
-  return state.cash + state.bankDeposit + inventoryValue - state.debt
+  return {
+    runId: state.runId,
+    day: state.day,
+    endDay: state.endDay,
+    cityId: state.currentCityId,
+    cityLabel: getCurrentCity(state).label,
+    cash: state.cash,
+    debt: state.debt,
+    bankDeposit: state.bankDeposit,
+    health: state.health,
+    inventoryValue: getInventoryValue(state),
+    stashUsed: getUsedSpace(state),
+    totalSpace: state.totalSpace,
+    score,
+    tierMessage: getScoreTier(score).message,
+  }
+}
+
+export function isRunOver(state: GameState) {
+  return state.day >= state.endDay
 }
 
 export function travelToCity(state: GameState, cityId: CityId) {
   if (cityId === state.currentCityId) {
-    return applyNews(state, [
-      {
-        tone: 'system',
-        text: `You are already working ${getCurrentCity(state).label}.`,
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'system',
+          text: `You are already working ${getCurrentCity(state).label}.`,
+        },
+      ],
+    })
   }
 
-  if (state.day >= state.endDay) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: 'The 30-day run is over. Start a new run to keep moving.',
-      },
-    ])
+  if (isRunOver(state)) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'The run clock is spent. Settle inventory, work the bank, and close the books.',
+        },
+      ],
+    })
   }
 
   const city = CITIES_BY_ID[cityId]
@@ -250,13 +378,31 @@ export function travelToCity(state: GameState, cityId: CityId) {
     market,
   }
 
-  return applyNews(nextState, [
-    {
-      tone: 'move',
-      text: `Shifted operations to ${city.label}. Street heat is running ${city.cops}%.`,
-    },
-    ...bulletins,
-  ])
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'move',
+        text: `Shifted operations to ${city.label}. Street heat is running ${city.cops}%.`,
+      },
+      ...(nextState.day >= nextState.endDay
+        ? [
+            {
+              tone: 'alert' as const,
+              text: 'Final day reached. Sell off, settle your money, and finalize the run when ready.',
+            },
+          ]
+        : []),
+      ...bulletins,
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'travel',
+        `Moved to ${city.label}`,
+        `Debt rolled to ${formatMoney(nextState.debt)} and the market reset for day ${nextState.day}.`,
+      ),
+    ],
+  })
 }
 
 export function buyDrug(
@@ -265,44 +411,52 @@ export function buyDrug(
   quantity: number,
 ) {
   if (quantity <= 0) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: 'Set a quantity higher than zero before you buy.',
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Set a quantity higher than zero before you buy.',
+        },
+      ],
+    })
   }
 
   const offer = state.market[drugId]
   const drug = DRUGS_BY_ID[drugId]
 
   if (!offer.available) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: `${drug.label} is dry in ${getCurrentCity(state).label} today.`,
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: `${drug.label} is dry in ${getCurrentCity(state).label} today.`,
+        },
+      ],
+    })
   }
 
   if (quantity > getAvailableSpace(state)) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: 'You need more stash space.',
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'You need more stash space.',
+        },
+      ],
+    })
   }
 
   const total = offer.price * quantity
 
   if (total > state.cash) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: 'You do not have enough cash for that pickup.',
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'You do not have enough cash for that pickup.',
+        },
+      ],
+    })
   }
 
   const nextState: GameState = {
@@ -314,12 +468,22 @@ export function buyDrug(
     },
   }
 
-  return applyNews(nextState, [
-    {
-      tone: 'market',
-      text: `Bought ${quantity} ${drug.label} at $${offer.price.toLocaleString()} each.`,
-    },
-  ])
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'market',
+        text: `Bought ${quantity} ${drug.label} at ${formatMoney(offer.price)} each.`,
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'trade',
+        `Bought ${quantity} ${drug.label}`,
+        `Spent ${formatMoney(total)} in ${getCurrentCity(nextState).label}.`,
+      ),
+    ],
+  })
 }
 
 export function sellDrug(
@@ -328,48 +492,272 @@ export function sellDrug(
   quantity: number,
 ) {
   if (quantity <= 0) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: 'Set a quantity higher than zero before you sell.',
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Set a quantity higher than zero before you sell.',
+        },
+      ],
+    })
   }
 
   const offer = state.market[drugId]
   const drug = DRUGS_BY_ID[drugId]
 
   if (!offer.available) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: `${drug.label} is not moving in ${getCurrentCity(state).label} today.`,
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: `${drug.label} is not moving in ${getCurrentCity(state).label} today.`,
+        },
+      ],
+    })
   }
 
   if (state.inventory[drugId] < quantity) {
-    return applyNews(state, [
-      {
-        tone: 'alert',
-        text: `You do not own ${quantity} ${drug.label}.`,
-      },
-    ])
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: `You do not own ${quantity} ${drug.label}.`,
+        },
+      ],
+    })
   }
 
+  const total = offer.price * quantity
   const nextState: GameState = {
     ...state,
-    cash: state.cash + offer.price * quantity,
+    cash: state.cash + total,
     inventory: {
       ...state.inventory,
       [drugId]: state.inventory[drugId] - quantity,
     },
   }
 
-  return applyNews(nextState, [
-    {
-      tone: 'market',
-      text: `Sold ${quantity} ${drug.label} at $${offer.price.toLocaleString()} each.`,
-    },
-  ])
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'market',
+        text: `Sold ${quantity} ${drug.label} at ${formatMoney(offer.price)} each.`,
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'trade',
+        `Sold ${quantity} ${drug.label}`,
+        `Pulled in ${formatMoney(total)} in ${getCurrentCity(nextState).label}.`,
+      ),
+    ],
+  })
+}
+
+export function depositCash(state: GameState, amount: number) {
+  if (amount <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Enter a deposit amount higher than zero.',
+        },
+      ],
+    })
+  }
+
+  const maxDeposit = getMaxDepositAmount(state)
+
+  if (amount > maxDeposit) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'You cannot stash more cash than you are carrying.',
+        },
+      ],
+    })
+  }
+
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash - amount,
+    bankDeposit: state.bankDeposit + amount,
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: `Deposited ${formatMoney(amount)} into the bank.`,
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        `Deposited ${formatMoney(amount)}`,
+        `Bank reserve climbed to ${formatMoney(nextState.bankDeposit)}.`,
+      ),
+    ],
+  })
+}
+
+export function withdrawCash(state: GameState, amount: number) {
+  if (amount <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Enter a withdrawal amount higher than zero.',
+        },
+      ],
+    })
+  }
+
+  const maxWithdraw = getMaxWithdrawAmount(state)
+
+  if (amount > maxWithdraw) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Your bank reserve is not that deep.',
+        },
+      ],
+    })
+  }
+
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash + amount,
+    bankDeposit: state.bankDeposit - amount,
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: `Withdrew ${formatMoney(amount)} from the bank.`,
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        `Withdrew ${formatMoney(amount)}`,
+        `Cash on hand is now ${formatMoney(nextState.cash)}.`,
+      ),
+    ],
+  })
+}
+
+export function payDebt(state: GameState, amount: number) {
+  if (amount <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Enter a payment amount higher than zero.',
+        },
+      ],
+    })
+  }
+
+  const maxPayment = getMaxDebtPayment(state)
+
+  if (amount > maxPayment) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'You cannot pay more debt than your cash on hand or remaining balance.',
+        },
+      ],
+    })
+  }
+
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash - amount,
+    debt: state.debt - amount,
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: `Paid down ${formatMoney(amount)} in debt.`,
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        `Paid ${formatMoney(amount)} toward debt`,
+        `Outstanding debt dropped to ${formatMoney(nextState.debt)}.`,
+      ),
+    ],
+  })
+}
+
+export function borrowMoney(state: GameState, amount: number) {
+  if (amount <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'Enter a borrow amount higher than zero.',
+        },
+      ],
+    })
+  }
+
+  const maxBorrow = getMaxBorrowAmount(state)
+
+  if (maxBorrow <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'No more credit is available on this run.',
+        },
+      ],
+    })
+  }
+
+  if (amount > maxBorrow) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: 'That would push your debt past the current loan ceiling.',
+        },
+      ],
+    })
+  }
+
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash + amount,
+    debt: state.debt + amount,
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: `Borrowed ${formatMoney(amount)} against the next collection day.`,
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        `Borrowed ${formatMoney(amount)}`,
+        `Cash rose to ${formatMoney(nextState.cash)} while debt climbed to ${formatMoney(nextState.debt)}.`,
+      ),
+    ],
+  })
 }
