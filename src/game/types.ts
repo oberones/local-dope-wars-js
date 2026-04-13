@@ -3,9 +3,9 @@ export type CityId = string
 export type ContentPackId = string
 export type LocaleId = string
 
-export type NewsTone = 'system' | 'move' | 'market' | 'alert'
+export type NewsTone = 'system' | 'move' | 'market' | 'alert' | 'encounter'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
-export type ActivityKind = 'run' | 'travel' | 'trade' | 'finance'
+export type ActivityKind = 'run' | 'travel' | 'trade' | 'finance' | 'encounter'
 
 export interface PriceBand {
   min: number

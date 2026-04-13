@@ -279,6 +279,184 @@ export function getAvailableSpace(state: GameState) {
   return state.totalSpace - getUsedSpace(state)
 }
 
+function getLargestInventoryHolding(state: GameState) {
+  const content = getContentPack(state.contentPackId)
+
+  return content.drugs.reduce<{
+    drugId: DrugId | null
+    label: string
+    quantity: number
+  }>(
+    (leader, drug) => {
+      const quantity = state.inventory[drug.id]
+
+      if (quantity > leader.quantity) {
+        return {
+          drugId: drug.id,
+          label: drug.label,
+          quantity,
+        }
+      }
+
+      return leader
+    },
+    {
+      drugId: null,
+      label: '',
+      quantity: 0,
+    },
+  )
+}
+
+function getTravelEncounterChance(cops: number) {
+  return Math.min(
+    GAME_CONFIG.travelEncounterBaseChance + cops * GAME_CONFIG.travelEncounterHeatFactor,
+    GAME_CONFIG.travelEncounterMaxChance,
+  )
+}
+
+function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCurrentCity>) {
+  if (Math.random() >= getTravelEncounterChance(city.cops)) {
+    return state
+  }
+
+  const largestHolding = getLargestInventoryHolding(state)
+  const canTriggerLuckyBreak =
+    city.cops < GAME_CONFIG.travelEncounterLuckyBreakMaxCops &&
+    Math.random() < GAME_CONFIG.travelEncounterLuckyBreakChance
+
+  if (canTriggerLuckyBreak) {
+    const bonus = randomInt(
+      GAME_CONFIG.travelEncounterLuckyBreakCashBonus.min,
+      GAME_CONFIG.travelEncounterLuckyBreakCashBonus.max,
+    )
+    const nextState: GameState = {
+      ...state,
+      cash: state.cash + bonus,
+    }
+
+    return applyUpdates(nextState, {
+      news: [
+        {
+          tone: 'encounter',
+          text: locale.game.luckyBreakNews(bonus),
+        },
+      ],
+      activity: [
+        createActivity(
+          nextState,
+          'encounter',
+          locale.game.luckyBreakTitle,
+          locale.game.luckyBreakDetail(city.label, bonus),
+        ),
+      ],
+    })
+  }
+
+  if (largestHolding.drugId && Math.random() < GAME_CONFIG.travelEncounterStashSweepChance) {
+    const seizedQuantity = Math.min(
+      largestHolding.quantity,
+      Math.max(
+        1,
+        Math.round(
+          largestHolding.quantity *
+            (GAME_CONFIG.travelEncounterStashSweepBaseShare +
+              city.cops / GAME_CONFIG.travelEncounterStashSweepHeatDivisor),
+        ),
+      ),
+    )
+    const nextState: GameState = {
+      ...state,
+      inventory: {
+        ...state.inventory,
+        [largestHolding.drugId]: state.inventory[largestHolding.drugId] - seizedQuantity,
+      },
+    }
+
+    return applyUpdates(nextState, {
+      news: [
+        {
+          tone: 'encounter',
+          text: locale.game.stashSweepNews(seizedQuantity, largestHolding.label),
+        },
+      ],
+      activity: [
+        createActivity(
+          nextState,
+          'encounter',
+          locale.game.stashSweepTitle(seizedQuantity, largestHolding.label),
+          locale.game.stashSweepDetail(city.label),
+        ),
+      ],
+    })
+  }
+
+  if (state.cash > 0 && Math.random() < GAME_CONFIG.travelEncounterShakedownChance) {
+    const cashTaken = Math.min(
+      state.cash,
+      Math.max(
+        1,
+        Math.round(
+          state.cash *
+            (GAME_CONFIG.travelEncounterShakedownBaseShare +
+              city.cops / GAME_CONFIG.travelEncounterShakedownHeatDivisor),
+        ),
+      ),
+    )
+    const nextState: GameState = {
+      ...state,
+      cash: state.cash - cashTaken,
+    }
+
+    return applyUpdates(nextState, {
+      news: [
+        {
+          tone: 'encounter',
+          text: locale.game.shakedownNews(cashTaken),
+        },
+      ],
+      activity: [
+        createActivity(
+          nextState,
+          'encounter',
+          locale.game.shakedownTitle,
+          locale.game.shakedownDetail(city.label, cashTaken),
+        ),
+      ],
+    })
+  }
+
+  const damage = Math.min(
+    state.health,
+    randomInt(
+      GAME_CONFIG.travelEncounterDamageMin,
+      GAME_CONFIG.travelEncounterDamageMaxBase +
+        Math.round(city.cops / GAME_CONFIG.travelEncounterDamageHeatDivisor),
+    ),
+  )
+  const nextState: GameState = {
+    ...state,
+    health: Math.max(state.health - damage, 0),
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'encounter',
+        text: locale.game.roughRideNews(damage),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'encounter',
+        locale.game.roughRideTitle,
+        locale.game.roughRideDetail(city.label, nextState.health),
+      ),
+    ],
+  })
+}
+
 export function getInventoryValue(state: GameState) {
   const content = getContentPack(state.contentPackId)
 
@@ -328,6 +506,20 @@ export function getMaxDebtPayment(state: GameState) {
 
 export function getMaxBorrowAmount(state: GameState) {
   return Math.max(GAME_CONFIG.maxDebt - state.debt, 0)
+}
+
+export function getMaxHealthRecoveryAmount(state: GameState) {
+  const missingHealth = Math.max(GAME_CONFIG.maxHealth - state.health, 0)
+
+  return Math.min(
+    missingHealth,
+    GAME_CONFIG.maxHealthRecoveryPerVisit,
+    Math.floor(state.cash / GAME_CONFIG.healthRecoveryCostPerPoint),
+  )
+}
+
+export function getHealthRecoveryCost(state: GameState) {
+  return getMaxHealthRecoveryAmount(state) * GAME_CONFIG.healthRecoveryCostPerPoint
 }
 
 export function getNetWorth(state: GameState) {
@@ -397,6 +589,17 @@ export function travelToCity(state: GameState, cityId: CityId) {
     })
   }
 
+  if (state.health <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.tooHurtToMove,
+        },
+      ],
+    })
+  }
+
   const content = getContentPack(state.contentPackId)
   const city = content.citiesById[cityId] ?? content.cities[0]
   const { market, bulletins } = buildMarket(state.contentPackId, cityId)
@@ -408,7 +611,7 @@ export function travelToCity(state: GameState, cityId: CityId) {
     market,
   }
 
-  return applyUpdates(nextState, {
+  const traveledState = applyUpdates(nextState, {
     news: [
       {
         tone: 'move',
@@ -433,6 +636,8 @@ export function travelToCity(state: GameState, cityId: CityId) {
       ),
     ],
   })
+
+  return resolveTravelEncounter(traveledState, city)
 }
 
 export function buyDrug(
@@ -795,6 +1000,58 @@ export function borrowMoney(state: GameState, amount: number) {
         'finance',
         locale.game.borrowedTitle(amount),
         locale.game.borrowedDetail(nextState.cash, nextState.debt),
+      ),
+    ],
+  })
+}
+
+export function recoverHealth(state: GameState) {
+  const missingHealth = Math.max(GAME_CONFIG.maxHealth - state.health, 0)
+
+  if (missingHealth <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.noRecoveryNeeded,
+        },
+      ],
+    })
+  }
+
+  const healthRecovered = getMaxHealthRecoveryAmount(state)
+
+  if (healthRecovered <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.noRecoveryCash,
+        },
+      ],
+    })
+  }
+
+  const recoveryCost = healthRecovered * GAME_CONFIG.healthRecoveryCostPerPoint
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash - recoveryCost,
+    health: Math.min(state.health + healthRecovered, GAME_CONFIG.maxHealth),
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: locale.game.recoveredHealthNews(healthRecovered, recoveryCost),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        locale.game.recoveredHealthTitle(healthRecovered),
+        locale.game.recoveredHealthDetail(nextState.health),
       ),
     ],
   })
