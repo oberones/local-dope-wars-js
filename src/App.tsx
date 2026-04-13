@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
 import { DEFAULT_CONTENT_PACK, getContentPack } from './game/content'
+import { DEFAULT_LOCALE } from './game/i18n'
 import { MapScene } from './components/MapScene'
 import {
   borrowMoney,
@@ -36,18 +37,11 @@ import type {
   DrugId,
   GameState,
   HighScoreEntry,
-  MarketOffer,
 } from './game/types'
 
 type AppScreen = 'menu' | 'run' | 'summary'
 type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'borrow'
-
-const moneyFormatter = new Intl.NumberFormat('en-US')
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-})
+const locale = DEFAULT_LOCALE
 
 function createTradeDrafts(drugIds = DEFAULT_CONTENT_PACK.drugs.map((drug) => drug.id)) {
   return drugIds.reduce(
@@ -92,41 +86,8 @@ function parsePositiveInteger(value: string) {
   return parsed
 }
 
-function formatMoney(value: number) {
-  const absolute = moneyFormatter.format(Math.abs(value))
-  return value < 0 ? `-$${absolute}` : `$${absolute}`
-}
-
-function formatDate(value: string) {
-  return dateFormatter.format(new Date(value))
-}
-
 function getCityById(cityId: CityId, cityIds: typeof DEFAULT_CONTENT_PACK.cities) {
   return cityIds.find((city) => city.id === cityId) ?? cityIds[0]
-}
-
-function modifierLabel(modifier: MarketOffer['modifier']) {
-  if (modifier === 'cheap') {
-    return 'Flooded'
-  }
-
-  if (modifier === 'expensive') {
-    return 'Burning'
-  }
-
-  return 'Steady'
-}
-
-function heatLabel(cops: number) {
-  if (cops < 20) {
-    return 'Low profile'
-  }
-
-  if (cops < 50) {
-    return 'Manageable heat'
-  }
-
-  return 'Red hot'
 }
 
 function actionLimitHint(
@@ -145,13 +106,13 @@ function actionLimitHint(
   if (amount !== null && amount > maxAmount) {
     return {
       error: true,
-      text: `Current max is ${formatMoney(maxAmount)}.`,
+      text: locale.hints.currentMax(maxAmount),
     }
   }
 
   return {
     error: false,
-    text: `${readyText} up to ${formatMoney(maxAmount)}.`,
+    text: locale.hints.readyUpTo(readyText, maxAmount),
   }
 }
 
@@ -164,34 +125,34 @@ function tradeHint(
   if (!available) {
     return {
       error: false,
-      text: `Off market here. You can only unload this elsewhere.`,
+      text: locale.hints.offMarket,
     }
   }
 
   if (amount !== null && amount > maxBuy && amount > maxSell) {
     return {
       error: true,
-      text: `Buy limit ${maxBuy} units. Inventory on hand ${maxSell}.`,
+      text: locale.hints.buyLimitAndInventory(maxBuy, maxSell),
     }
   }
 
   if (amount !== null && amount > maxBuy) {
     return {
       error: true,
-      text: `Buy limit ${maxBuy} units at this price.`,
+      text: locale.hints.buyLimit(maxBuy),
     }
   }
 
   if (amount !== null && amount > maxSell) {
     return {
       error: true,
-      text: `You only hold ${maxSell} units right now.`,
+      text: locale.hints.inventoryOnly(maxSell),
     }
   }
 
   return {
     error: false,
-    text: `Buy up to ${maxBuy}. Sell up to ${maxSell}.`,
+    text: locale.hints.buySellRange(maxBuy, maxSell),
   }
 }
 
@@ -355,42 +316,47 @@ function App() {
       <main className="shell shell--centered">
         <section className="panel launch-screen">
           <div className="launch-screen__copy">
-            <p className="eyebrow">Default content pack</p>
-            <h1>Local Dope Wars</h1>
+            <p className="eyebrow">{locale.menu.eyebrow}</p>
+            <h1>{locale.appTitle}</h1>
             <p className="hero__lede">
-              The current build still ships with the {resumeContent.label} layout by
-              default, but Phase 1 now has the structure for persistent runs,
-              cleaner financial play, and proper end-of-run handoff.
+              {locale.menu.heroLede(resumeContent.label)}
             </p>
             <div className="hero__ticker">
-              <span>{resumeContent.shortLabel} starter pack loaded</span>
-              <span>Thirty-day run format</span>
-              <span>Autosave + high scores enabled</span>
+              <span>{locale.menu.starterPackLoaded(resumeContent.shortLabel)}</span>
+              <span>{locale.menu.runFormat}</span>
+              <span>{locale.menu.persistenceEnabled}</span>
             </div>
           </div>
 
           <div className="launch-screen__card">
             <p className="meta-label">
-              {resumeSummary ? 'Saved run ready' : 'Fresh run ready'}
+              {resumeSummary ? locale.menu.savedRunReady : locale.menu.freshRunReady}
             </p>
             <h2>
               {resumeSummary
-                ? `${resumeSummary.cityLabel}, day ${resumeSummary.day}`
-                : 'Thirty nights to build a stack'}
+                ? locale.menu.savedRunHeading(
+                    resumeSummary.cityLabel,
+                    resumeSummary.day,
+                  )
+                : locale.menu.freshRunHeading}
             </h2>
             <p className="launch-screen__summary">
               {resumeSummary
-                ? `Resume with ${formatMoney(resumeSummary.score)} in net worth, ${formatMoney(resumeSummary.cash)} cash, and ${formatMoney(resumeSummary.debt)} debt still hanging over the run.`
-                : `Open a new ${resumeContent.shortLabel} run with cash in pocket, debt on your back, and the county map ready to work.`}
+                ? locale.menu.savedRunSummary(
+                    resumeSummary.score,
+                    resumeSummary.cash,
+                    resumeSummary.debt,
+                  )
+                : locale.menu.freshRunSummary(resumeContent.shortLabel)}
             </p>
             <div className="launch-screen__actions">
               {resumeSummary ? (
                 <button className="ghost-button" onClick={continueSavedRun}>
-                  Continue saved run
+                  {locale.menu.continueSavedRun}
                 </button>
               ) : null}
               <button className="accent-button" onClick={startNewRun}>
-                Start new run
+                {locale.menu.startNewRun}
               </button>
             </div>
           </div>
@@ -400,11 +366,11 @@ function App() {
           <article className="panel launch-card">
             <div className="panel__header">
               <div>
-                <p className="eyebrow">Top runs</p>
-                <h2>High scores</h2>
+                <p className="eyebrow">{locale.menu.topRunsEyebrow}</p>
+                <h2>{locale.menu.highScoresHeading}</h2>
               </div>
               <p className="news-panel__summary">
-                Best closed-out runs from this browser.
+                {locale.menu.highScoresSummary}
               </p>
             </div>
 
@@ -413,22 +379,26 @@ function App() {
                 {highScores.map((entry, index) => (
                   <li key={`${entry.runId}-${entry.recordedAt}`} className="scoreboard__item">
                     <div>
-                      <p className="scoreboard__rank">#{index + 1}</p>
+                      <p className="scoreboard__rank">{locale.formatRank(index + 1)}</p>
                       <p className="scoreboard__title">
-                        {entry.contentLabel} · {entry.cityLabel} · Day {entry.day}
+                        {locale.formatScoreboardTitle(
+                          entry.contentLabel,
+                          entry.cityLabel,
+                          entry.day,
+                        )}
                       </p>
                       <p className="scoreboard__detail">{entry.tierMessage}</p>
                     </div>
                     <div className="scoreboard__score">
-                      <strong>{formatMoney(entry.score)}</strong>
-                      <span>{formatDate(entry.recordedAt)}</span>
+                      <strong>{locale.formatMoney(entry.score)}</strong>
+                      <span>{locale.formatDate(entry.recordedAt)}</span>
                     </div>
                   </li>
                 ))}
               </ol>
             ) : (
               <p className="empty-state">
-                No finished runs recorded yet. Close one out to seed the board.
+                {locale.menu.emptyHighScores}
               </p>
             )}
           </article>
@@ -436,15 +406,14 @@ function App() {
           <article className="panel launch-card">
             <div className="panel__header">
               <div>
-                <p className="eyebrow">Phase 1 slice</p>
-                <h2>What changed</h2>
+                <p className="eyebrow">{locale.menu.currentBuildEyebrow}</p>
+                <h2>{locale.menu.currentBuildHeading}</h2>
               </div>
             </div>
             <ul className="feature-list">
-              <li>Runs now autosave and can be resumed from the launch screen.</li>
-              <li>Banking, withdrawals, debt payoff, and borrowing are live.</li>
-              <li>The run can be formally closed with a score summary and leaderboard entry.</li>
-              <li>A dedicated activity ledger now tracks the moves that matter.</li>
+              {locale.menu.currentBuildItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
           </article>
         </section>
@@ -456,42 +425,46 @@ function App() {
     return (
       <main className="shell shell--centered">
         <section className="panel summary-screen">
-          <p className="eyebrow">Run closed</p>
-          <h1>{formatMoney(lastSummary.score)}</h1>
+          <p className="eyebrow">{locale.summary.eyebrow}</p>
+          <h1>{locale.formatMoney(lastSummary.score)}</h1>
           <p className="summary-screen__lede">{lastSummary.tierMessage}</p>
           <div className="summary-screen__chips">
             <span>{lastSummary.cityLabel}</span>
             <span>
-              Day {lastSummary.day} / {lastSummary.endDay}
+              {locale.formatDayProgress(lastSummary.day, lastSummary.endDay)}
             </span>
-            <span>{latestRank > 0 ? `Leaderboard rank #${latestRank}` : 'Run logged'}</span>
+            <span>
+              {latestRank > 0
+                ? locale.summary.leaderboardRank(latestRank)
+                : locale.summary.runLogged}
+            </span>
           </div>
 
           <div className="summary-screen__stats">
             <article className="summary-stat">
-              <p className="meta-label">Cash</p>
-              <p>{formatMoney(lastSummary.cash)}</p>
+              <p className="meta-label">{locale.summary.cashLabel}</p>
+              <p>{locale.formatMoney(lastSummary.cash)}</p>
             </article>
             <article className="summary-stat">
-              <p className="meta-label">Bank</p>
-              <p>{formatMoney(lastSummary.bankDeposit)}</p>
+              <p className="meta-label">{locale.summary.bankLabel}</p>
+              <p>{locale.formatMoney(lastSummary.bankDeposit)}</p>
             </article>
             <article className="summary-stat">
-              <p className="meta-label">Inventory value</p>
-              <p>{formatMoney(lastSummary.inventoryValue)}</p>
+              <p className="meta-label">{locale.summary.inventoryValueLabel}</p>
+              <p>{locale.formatMoney(lastSummary.inventoryValue)}</p>
             </article>
             <article className="summary-stat">
-              <p className="meta-label">Debt</p>
-              <p>{formatMoney(lastSummary.debt)}</p>
+              <p className="meta-label">{locale.summary.debtLabel}</p>
+              <p>{locale.formatMoney(lastSummary.debt)}</p>
             </article>
           </div>
 
           <div className="summary-screen__actions">
             <button className="ghost-button" onClick={() => setScreen('menu')}>
-              Back to launch board
+              {locale.summary.backToLaunchBoard}
             </button>
             <button className="accent-button" onClick={startNewRun}>
-              Start another run
+              {locale.summary.startAnotherRun}
             </button>
           </div>
         </section>
@@ -499,23 +472,27 @@ function App() {
         <section className="panel launch-card">
           <div className="panel__header">
             <div>
-              <p className="eyebrow">Top runs</p>
-              <h2>Current leaderboard</h2>
+              <p className="eyebrow">{locale.menu.topRunsEyebrow}</p>
+              <h2>{locale.summary.currentLeaderboardHeading}</h2>
             </div>
           </div>
           <ol className="scoreboard">
             {highScores.map((entry, index) => (
               <li key={`${entry.runId}-${entry.recordedAt}`} className="scoreboard__item">
                 <div>
-                  <p className="scoreboard__rank">#{index + 1}</p>
+                  <p className="scoreboard__rank">{locale.formatRank(index + 1)}</p>
                   <p className="scoreboard__title">
-                    {entry.contentLabel} · {entry.cityLabel} · Day {entry.day}
+                    {locale.formatScoreboardTitle(
+                      entry.contentLabel,
+                      entry.cityLabel,
+                      entry.day,
+                    )}
                   </p>
                   <p className="scoreboard__detail">{entry.tierMessage}</p>
                 </div>
                 <div className="scoreboard__score">
-                  <strong>{formatMoney(entry.score)}</strong>
-                  <span>{formatDate(entry.recordedAt)}</span>
+                  <strong>{locale.formatMoney(entry.score)}</strong>
+                  <span>{locale.formatDate(entry.recordedAt)}</span>
                 </div>
               </li>
             ))}
@@ -594,61 +571,59 @@ function App() {
   const depositHint = actionLimitHint(
     depositAmount,
     maxDeposit,
-    'Move',
-    'No cash available to stash right now.',
+    locale.run.depositButton,
+    locale.hints.noCashToStash,
   )
   const withdrawHint = actionLimitHint(
     withdrawAmount,
     maxWithdraw,
-    'Pull',
-    'No bank reserve available to withdraw.',
+    locale.hints.withdrawVerb,
+    locale.hints.noBankReserve,
   )
   const payDebtHint = actionLimitHint(
     debtPaymentAmount,
     maxDebtPayment,
-    'Pay down',
-    game.debt <= 0 ? 'Debt is cleared.' : 'No cash available to pay debt.',
+    locale.hints.payDebtVerb,
+    game.debt <= 0 ? locale.hints.debtCleared : locale.hints.noCashForDebt,
   )
   const borrowHint = actionLimitHint(
     borrowAmount,
     maxBorrow,
-    'Borrow',
-    'Loan ceiling already reached for this run.',
+    locale.run.borrowButton,
+    locale.hints.loanCeilingReached,
   )
 
   return (
     <main className="shell">
       <header className="panel hero">
         <div className="hero__copy">
-          <p className="eyebrow">Operational dashboard</p>
-          <h1>Local Dope Wars</h1>
+          <p className="eyebrow">{locale.run.dashboardEyebrow}</p>
+          <h1>{locale.appTitle}</h1>
           <p className="hero__lede">
-            The {content.shortLabel} starter map is still the active default pack, but the
-            run now carries proper persistence, a working bank layer, and a
-            clean way to close the books when the thirty-day clock runs out.
+            {locale.run.heroLede(content.shortLabel)}
           </p>
           <div className="hero__ticker">
             <span>{currentCity.district}</span>
-            <span>{liveOffers.length} live products tonight</span>
-            <span>{daysRemaining} nights left in the run</span>
+            <span>{locale.run.liveProducts(liveOffers.length)}</span>
+            <span>{locale.run.nightsLeft(daysRemaining)}</span>
           </div>
         </div>
         <div className="hero__meta">
           <div className="hero__meta-row">
             <div>
-              <p className="meta-label">Operating city</p>
+              <p className="meta-label">{locale.run.operatingCity}</p>
               <p className="meta-value">{currentCity.label}</p>
             </div>
             <div>
-              <p className="meta-label">Run clock</p>
+              <p className="meta-label">{locale.run.runClock}</p>
               <p className="meta-value">
-                Day {game.day} / {game.endDay}
+                {locale.formatDayProgress(game.day, game.endDay)}
               </p>
             </div>
           </div>
           <div className="progress-cluster">
             <div className="progress-cluster__copy">
-              <p className="meta-label">Campaign progress</p>
+              <p className="meta-label">{locale.run.campaignProgress}</p>
               <p className="progress-cluster__value">
                 {Math.round(dayProgress)}%
               </p>
@@ -661,16 +636,16 @@ function App() {
             </div>
             <p className="progress-cluster__note">
               {runClosed
-                ? 'Final day reached. You can still settle inventory and finances before closing the run.'
-                : `${daysRemaining} nights remain before the books close. This run autosaves after each move.`}
+                ? locale.run.finalDayNote
+                : locale.run.activeRunNote(daysRemaining)}
             </p>
           </div>
           <div className="hero__actions">
             <button className="ghost-button" onClick={saveAndReturnToMenu}>
-              Save and exit
+              {locale.run.saveAndExit}
             </button>
             <button className="hero__reset" onClick={startNewRun}>
-              New run
+              {locale.run.newRun}
             </button>
           </div>
         </div>
@@ -679,20 +654,19 @@ function App() {
       {runClosed ? (
         <section className="panel run-status">
           <div>
-            <p className="eyebrow">Run complete</p>
-            <h2>Close the books when you are ready</h2>
+            <p className="eyebrow">{locale.run.completeEyebrow}</p>
+            <h2>{locale.run.completeHeading}</h2>
             <p className="run-status__copy">
-              Travel is locked now, but you can still liquidate the stash, work
-              the bank, and pay debt before filing the final score.
+              {locale.run.completeCopy}
             </p>
           </div>
           <div className="run-status__actions">
             <div>
-              <p className="meta-label">Current score preview</p>
-              <p className="run-status__value">{formatMoney(runValue)}</p>
+              <p className="meta-label">{locale.run.currentScorePreview}</p>
+              <p className="run-status__value">{locale.formatMoney(runValue)}</p>
             </div>
             <button className="accent-button" onClick={finalizeRun}>
-              Finalize run
+              {locale.run.finalizeRun}
             </button>
           </div>
         </section>
@@ -700,81 +674,83 @@ function App() {
 
       <section className="stats-grid">
         <article className="panel stat-card">
-          <p className="meta-label">Cash on hand</p>
-          <p className="stat-card__value">{formatMoney(game.cash)}</p>
+          <p className="meta-label">{locale.run.cashOnHand}</p>
+          <p className="stat-card__value">{locale.formatMoney(game.cash)}</p>
         </article>
         <article className="panel stat-card">
-          <p className="meta-label">Bank reserve</p>
-          <p className="stat-card__value">{formatMoney(game.bankDeposit)}</p>
+          <p className="meta-label">{locale.run.bankReserve}</p>
+          <p className="stat-card__value">{locale.formatMoney(game.bankDeposit)}</p>
         </article>
         <article className="panel stat-card">
-          <p className="meta-label">Debt pressure</p>
-          <p className="stat-card__value">{formatMoney(game.debt)}</p>
+          <p className="meta-label">{locale.run.debtPressure}</p>
+          <p className="stat-card__value">{locale.formatMoney(game.debt)}</p>
         </article>
         <article className="panel stat-card">
-          <p className="meta-label">Stash space</p>
+          <p className="meta-label">{locale.run.stashSpace}</p>
           <p className="stat-card__value">
             {usedSpace}/{game.totalSpace}
           </p>
         </article>
         <article className="panel stat-card">
-          <p className="meta-label">Run value</p>
-          <p className="stat-card__value">{formatMoney(runValue)}</p>
+          <p className="meta-label">{locale.run.runValue}</p>
+          <p className="stat-card__value">{locale.formatMoney(runValue)}</p>
         </article>
       </section>
 
       <section className="signal-grid">
         <article className="panel signal-card">
-          <p className="eyebrow">Cheapest lane</p>
-          <h2>{cheapestOffer?.label ?? 'No open market'}</h2>
+          <p className="eyebrow">{locale.run.cheapestLane}</p>
+          <h2>{cheapestOffer?.label ?? locale.run.noOpenMarket}</h2>
           <p className="signal-card__value">
             {cheapestOffer
-              ? formatMoney(game.market[cheapestOffer.id].price)
-              : 'Unavailable'}
+              ? locale.formatMoney(game.market[cheapestOffer.id].price)
+              : locale.run.unavailable}
           </p>
           <p className="signal-card__meta">
-            Lowest price currently moving in {currentCity.label}.
+            {locale.run.cheapestLaneMeta(currentCity.label)}
           </p>
         </article>
 
         <article className="panel signal-card">
-          <p className="eyebrow">Highest ticket</p>
-          <h2>{priciestOffer?.label ?? 'No open market'}</h2>
+          <p className="eyebrow">{locale.run.highestTicket}</p>
+          <h2>{priciestOffer?.label ?? locale.run.noOpenMarket}</h2>
           <p className="signal-card__value">
             {priciestOffer
-              ? formatMoney(game.market[priciestOffer.id].price)
-              : 'Unavailable'}
+              ? locale.formatMoney(game.market[priciestOffer.id].price)
+              : locale.run.unavailable}
           </p>
           <p className="signal-card__meta">
-            Biggest single-unit payout on the board right now.
+            {locale.run.highestTicketMeta}
           </p>
         </article>
 
         <article className="panel signal-card">
-          <p className="eyebrow">Market pulse</p>
+          <p className="eyebrow">{locale.run.marketPulse}</p>
           <h2>{featuredModifierDrug?.label ?? currentCity.label}</h2>
           <p className="signal-card__value">
             {featuredModifierDrug
-              ? modifierLabel(game.market[featuredModifierDrug.id].modifier)
-              : heatLabel(currentCity.cops)}
+              ? locale.formatMarketModifier(game.market[featuredModifierDrug.id].modifier)
+              : locale.formatHeatLabel(currentCity.cops)}
           </p>
           <p className="signal-card__meta">
             {featuredModifierDrug
-              ? 'The loudest pricing shift currently on the board.'
-              : 'No special modifiers are active tonight.'}
+              ? locale.run.marketPulseMeta
+              : locale.run.marketPulseIdle}
           </p>
         </article>
 
         <article className="panel signal-card">
-          <p className="eyebrow">Bag leader</p>
-          <h2>{inventoryLeaderDrug?.label ?? 'Empty stash'}</h2>
+          <p className="eyebrow">{locale.run.bagLeader}</p>
+          <h2>{inventoryLeaderDrug?.label ?? locale.run.emptyStash}</h2>
           <p className="signal-card__value">
-            {inventoryLeaderDrug ? `${inventoryLeader.quantity} units` : '0 units'}
+            {inventoryLeaderDrug
+              ? locale.formatUnits(inventoryLeader.quantity)
+              : locale.formatUnits(0)}
           </p>
           <p className="signal-card__meta">
             {inventoryLeaderDrug
-              ? 'Largest stack currently in inventory.'
-              : 'No inventory yet, so the board is clean.'}
+              ? locale.run.inventoryLeaderMeta
+              : locale.run.emptyInventoryBoard}
           </p>
         </article>
       </section>
@@ -783,33 +759,32 @@ function App() {
         <article className="panel finance-panel">
           <div className="panel__header">
             <div>
-              <p className="eyebrow">Finance desk</p>
-              <h2>Bank and debt</h2>
+              <p className="eyebrow">{locale.run.financeEyebrow}</p>
+              <h2>{locale.run.financeHeading}</h2>
             </div>
             <p className="news-panel__summary">
-              Move cash, protect winnings, and decide how hard to lean on the
-              loan ceiling.
+              {locale.run.financeSummary}
             </p>
           </div>
 
           <div className="finance-panel__summary">
             <div className="finance-summary-card">
-              <p className="meta-label">Bank reserve</p>
-              <p>{formatMoney(game.bankDeposit)}</p>
+              <p className="meta-label">{locale.run.bankReserve}</p>
+              <p>{locale.formatMoney(game.bankDeposit)}</p>
             </div>
             <div className="finance-summary-card">
-              <p className="meta-label">Outstanding debt</p>
-              <p>{formatMoney(game.debt)}</p>
+              <p className="meta-label">{locale.run.outstandingDebt}</p>
+              <p>{locale.formatMoney(game.debt)}</p>
             </div>
             <div className="finance-summary-card">
-              <p className="meta-label">Credit remaining</p>
-              <p>{formatMoney(maxBorrow)}</p>
+              <p className="meta-label">{locale.run.creditRemaining}</p>
+              <p>{locale.formatMoney(maxBorrow)}</p>
             </div>
           </div>
 
           <div className="finance-panel__grid">
             <label className="finance-control">
-              <span>Deposit to bank</span>
+              <span>{locale.run.depositLabel}</span>
               <div className="finance-control__row">
                 <input
                   inputMode="numeric"
@@ -828,7 +803,7 @@ function App() {
                   }
                   onClick={() => commitFinanceAction('deposit', depositCash)}
                 >
-                  Deposit
+                  {locale.run.depositButton}
                 </button>
               </div>
               <p
@@ -841,7 +816,7 @@ function App() {
             </label>
 
             <label className="finance-control">
-              <span>Withdraw from bank</span>
+              <span>{locale.run.withdrawLabel}</span>
               <div className="finance-control__row">
                 <input
                   inputMode="numeric"
@@ -862,7 +837,7 @@ function App() {
                     commitFinanceAction('withdraw', withdrawCash)
                   }
                 >
-                  Withdraw
+                  {locale.run.withdrawButton}
                 </button>
               </div>
               <p
@@ -875,7 +850,7 @@ function App() {
             </label>
 
             <label className="finance-control">
-              <span>Pay debt</span>
+              <span>{locale.run.payDebtLabel}</span>
               <div className="finance-control__row">
                 <input
                   inputMode="numeric"
@@ -894,7 +869,7 @@ function App() {
                   }
                   onClick={() => commitFinanceAction('payDebt', payDebt)}
                 >
-                  Pay
+                  {locale.run.payDebtButton}
                 </button>
               </div>
               <p
@@ -907,7 +882,7 @@ function App() {
             </label>
 
             <label className="finance-control">
-              <span>Borrow more cash</span>
+              <span>{locale.run.borrowLabel}</span>
               <div className="finance-control__row">
                 <input
                   inputMode="numeric"
@@ -926,7 +901,7 @@ function App() {
                   }
                   onClick={() => commitFinanceAction('borrow', borrowMoney)}
                 >
-                  Borrow
+                  {locale.run.borrowButton}
                 </button>
               </div>
               <p
@@ -943,11 +918,11 @@ function App() {
         <aside className="panel activity-panel">
           <div className="panel__header">
             <div>
-              <p className="eyebrow">Ledger</p>
-              <h2>Activity log</h2>
+              <p className="eyebrow">{locale.run.ledgerEyebrow}</p>
+              <h2>{locale.run.ledgerHeading}</h2>
             </div>
             <p className="news-panel__summary">
-              Recent trades, travel, and finance actions for this run.
+              {locale.run.ledgerSummary}
             </p>
           </div>
           <ol className="activity-list">
@@ -957,8 +932,7 @@ function App() {
                 className={`activity-item activity-item--${item.kind}`}
               >
                 <div className="activity-item__meta">
-                  <span>Day {item.day}</span>
-                  <span>{item.kind}</span>
+                  <span>{locale.run.activityMeta(item.day, item.kind)}</span>
                 </div>
                 <p className="activity-item__title">{item.title}</p>
                 <p className="activity-item__detail">{item.detail}</p>
@@ -972,11 +946,13 @@ function App() {
         <article className="panel city-panel">
           <div className="panel__header">
             <div>
-              <p className="eyebrow">Territory scene</p>
+              <p className="eyebrow">{locale.run.territoryEyebrow}</p>
               <h2>{content.map.title}</h2>
             </div>
             <div className="heat-cluster">
-              <span className="heat-cluster__label">{heatLabel(currentCity.cops)}</span>
+              <span className="heat-cluster__label">
+                {locale.formatHeatLabel(currentCity.cops)}
+              </span>
               <div className="heat-meter" aria-hidden="true">
                 <span
                   className="heat-meter__fill"
@@ -998,7 +974,7 @@ function App() {
             />
 
             <div className="city-brief">
-              <p className="eyebrow">Focused city</p>
+              <p className="eyebrow">{locale.run.focusedCityEyebrow}</p>
               <h3>{focusedCity.label}</h3>
               <p>{focusedCity.atmosphere}</p>
               <div className="city-brief__chips">
@@ -1007,21 +983,21 @@ function App() {
               </div>
               <dl className="city-brief__stats">
                 <div>
-                  <dt>Heat</dt>
+                  <dt>{locale.run.heatLabel}</dt>
                   <dd>{focusedCity.cops}%</dd>
                 </div>
                 <div>
-                  <dt>Signature</dt>
+                  <dt>{locale.run.signatureLabel}</dt>
                   <dd>{focusedCity.signature}</dd>
                 </div>
                 <div>
-                  <dt>Status</dt>
+                  <dt>{locale.run.statusLabel}</dt>
                   <dd>
                     {focusedCity.id === game.currentCityId
-                      ? 'Current territory'
+                      ? locale.run.currentTerritory
                       : runClosed
-                        ? 'Travel locked'
-                        : 'Available to travel'}
+                        ? locale.run.travelLocked
+                        : locale.run.availableToTravel}
                   </dd>
                 </div>
               </dl>
@@ -1031,10 +1007,10 @@ function App() {
                 onClick={() => handleTravel(focusedCity.id)}
               >
                 {focusedCity.id === game.currentCityId
-                  ? 'Current territory'
+                  ? locale.run.currentTerritory
                   : runClosed
-                    ? 'Travel locked'
-                    : `Travel to ${focusedCity.label}`}
+                    ? locale.run.travelLocked
+                    : locale.map.travelTo(focusedCity.label)}
               </button>
             </div>
           </div>
@@ -1043,11 +1019,11 @@ function App() {
         <aside className="panel news-panel">
           <div className="panel__header">
             <div>
-              <p className="eyebrow">Street chatter</p>
-              <h2>Signal feed</h2>
+              <p className="eyebrow">{locale.run.streetChatterEyebrow}</p>
+              <h2>{locale.run.signalFeedHeading}</h2>
             </div>
             <p className="news-panel__summary">
-              Market headlines, travel signals, and warnings from the run.
+              {locale.run.signalFeedSummary}
             </p>
           </div>
           <ol className="news-list">
@@ -1063,12 +1039,11 @@ function App() {
       <section className="panel market-panel">
         <div className="panel__header market-panel__header">
           <div>
-            <p className="eyebrow">Trading floor</p>
-            <h2>Market board</h2>
+            <p className="eyebrow">{locale.run.tradingFloorEyebrow}</p>
+            <h2>{locale.run.marketBoardHeading}</h2>
           </div>
           <p className="market-panel__note">
-            Trading still runs on the pure game core, but now the board gives
-            clearer input limits so you can see edge cases before a move fires.
+            {locale.run.marketBoardNote}
           </p>
         </div>
 
@@ -1109,25 +1084,29 @@ function App() {
                   </div>
                   <div className="offer-card__price-block">
                     <span className="offer-card__price">
-                      {offer.available ? formatMoney(offer.price) : 'Off market'}
+                      {offer.available
+                        ? locale.formatMoney(offer.price)
+                        : locale.run.offMarket}
                     </span>
                     <span className="offer-card__badge">
-                      {offer.available ? modifierLabel(offer.modifier) : 'Hidden'}
+                      {offer.available
+                        ? locale.formatMarketModifier(offer.modifier)
+                        : locale.run.hidden}
                     </span>
                   </div>
                 </div>
 
                 <div className="offer-card__stats">
-                  <span>Owned {inventory}</span>
+                  <span>{locale.run.ownedLabel(inventory)}</span>
                   <span>
                     {offer.available
-                      ? `Buying room ${maxBuy}`
-                      : 'Travel to another city to move it'}
+                      ? locale.run.buyingRoom(maxBuy)
+                      : locale.run.travelElsewhere}
                   </span>
                 </div>
 
                 <label className="trade-field">
-                  <span>Quantity</span>
+                  <span>{locale.run.quantityLabel}</span>
                   <input
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -1150,28 +1129,28 @@ function App() {
                     disabled={maxBuy === 0}
                     onClick={() => fillMaxBuy(drug.id)}
                   >
-                    Max buy
+                    {locale.run.maxBuyButton}
                   </button>
                   <button
                     className="accent-button"
                     disabled={buyDisabled}
                     onClick={() => commitBuy(drug.id)}
                   >
-                    Buy
+                    {locale.run.buyButton}
                   </button>
                   <button
                     className="ghost-button"
                     disabled={maxSell === 0}
                     onClick={() => fillMaxSell(drug.id)}
                   >
-                    Max sell
+                    {locale.run.maxSellButton}
                   </button>
                   <button
                     className="accent-button accent-button--secondary"
                     disabled={sellDisabled}
                     onClick={() => commitSell(drug.id)}
                   >
-                    Sell
+                    {locale.run.sellButton}
                   </button>
                 </div>
               </article>
