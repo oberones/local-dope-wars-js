@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
-import { CITIES, DRUGS } from './game/content'
+import { DEFAULT_CONTENT_PACK, getContentPack } from './game/content'
 import { MapScene } from './components/MapScene'
 import {
   borrowMoney,
@@ -49,10 +49,10 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 })
 
-function createTradeDrafts() {
-  return DRUGS.reduce(
+function createTradeDrafts(drugIds = DEFAULT_CONTENT_PACK.drugs.map((drug) => drug.id)) {
+  return drugIds.reduce(
     (drafts, drug) => {
-      drafts[drug.id] = ''
+      drafts[drug] = ''
       return drafts
     },
     {} as Record<DrugId, string>,
@@ -101,8 +101,8 @@ function formatDate(value: string) {
   return dateFormatter.format(new Date(value))
 }
 
-function getCityById(cityId: CityId) {
-  return CITIES.find((city) => city.id === cityId) ?? CITIES[0]
+function getCityById(cityId: CityId, cityIds: typeof DEFAULT_CONTENT_PACK.cities) {
+  return cityIds.find((city) => city.id === cityId) ?? cityIds[0]
 }
 
 function modifierLabel(modifier: MarketOffer['modifier']) {
@@ -203,7 +203,9 @@ function App() {
     loadHighScores(),
   )
   const [lastSummary, setLastSummary] = useState<HighScoreEntry | null>(null)
-  const [focusedCityId, setFocusedCityId] = useState<CityId>(CITIES[0].id)
+  const [focusedCityId, setFocusedCityId] = useState<CityId>(
+    DEFAULT_CONTENT_PACK.cities[0]?.id ?? '',
+  )
   const [tradeDrafts, setTradeDrafts] = useState<Record<DrugId, string>>(
     () => createTradeDrafts(),
   )
@@ -218,9 +220,11 @@ function App() {
   }, [game, screen])
 
   function openRun(nextGame: GameState) {
+    const nextContent = getContentPack(nextGame.contentPackId)
+
     setGame(nextGame)
     setFocusedCityId(nextGame.currentCityId)
-    setTradeDrafts(createTradeDrafts())
+    setTradeDrafts(createTradeDrafts(nextContent.drugs.map((drug) => drug.id)))
     setFinanceDrafts(createFinanceDrafts())
     setScreen('run')
   }
@@ -338,6 +342,9 @@ function App() {
     clearFinanceDraft(field)
   }
 
+  const resumeContent = resumeGame
+    ? getContentPack(resumeGame.contentPackId)
+    : DEFAULT_CONTENT_PACK
   const resumeSummary = resumeGame ? buildRunSummary(resumeGame) : null
   const latestRank = lastSummary
     ? highScores.findIndex((entry) => entry.runId === lastSummary.runId) + 1
@@ -351,12 +358,12 @@ function App() {
             <p className="eyebrow">Default content pack</p>
             <h1>Local Dope Wars</h1>
             <p className="hero__lede">
-              The current build still ships with the Gwinnett County layout by
+              The current build still ships with the {resumeContent.label} layout by
               default, but Phase 1 now has the structure for persistent runs,
               cleaner financial play, and proper end-of-run handoff.
             </p>
             <div className="hero__ticker">
-              <span>Gwinnett starter pack loaded</span>
+              <span>{resumeContent.shortLabel} starter pack loaded</span>
               <span>Thirty-day run format</span>
               <span>Autosave + high scores enabled</span>
             </div>
@@ -374,7 +381,7 @@ function App() {
             <p className="launch-screen__summary">
               {resumeSummary
                 ? `Resume with ${formatMoney(resumeSummary.score)} in net worth, ${formatMoney(resumeSummary.cash)} cash, and ${formatMoney(resumeSummary.debt)} debt still hanging over the run.`
-                : 'Open a new Gwinnett run with cash in pocket, debt on your back, and the county map ready to work.'}
+                : `Open a new ${resumeContent.shortLabel} run with cash in pocket, debt on your back, and the county map ready to work.`}
             </p>
             <div className="launch-screen__actions">
               {resumeSummary ? (
@@ -408,7 +415,7 @@ function App() {
                     <div>
                       <p className="scoreboard__rank">#{index + 1}</p>
                       <p className="scoreboard__title">
-                        {entry.cityLabel} · Day {entry.day}
+                        {entry.contentLabel} · {entry.cityLabel} · Day {entry.day}
                       </p>
                       <p className="scoreboard__detail">{entry.tierMessage}</p>
                     </div>
@@ -502,7 +509,7 @@ function App() {
                 <div>
                   <p className="scoreboard__rank">#{index + 1}</p>
                   <p className="scoreboard__title">
-                    {entry.cityLabel} · Day {entry.day}
+                    {entry.contentLabel} · {entry.cityLabel} · Day {entry.day}
                   </p>
                   <p className="scoreboard__detail">{entry.tierMessage}</p>
                 </div>
@@ -522,12 +529,15 @@ function App() {
     return null
   }
 
+  const content = getContentPack(game.contentPackId)
+  const cities = content.cities
+  const drugs = content.drugs
   const currentCity = getCurrentCity(game)
-  const focusedCity = getCityById(focusedCityId)
+  const focusedCity = getCityById(focusedCityId, cities)
   const usedSpace = getUsedSpace(game)
   const runValue = getNetWorth(game)
   const runClosed = isRunOver(game)
-  const liveOffers = DRUGS.filter((drug) => game.market[drug.id].available)
+  const liveOffers = drugs.filter((drug) => game.market[drug.id].available)
   const daysRemaining = Math.max(game.endDay - game.day, 0)
   const dayProgress = Math.min((game.day / game.endDay) * 100, 100)
   const maxDeposit = getMaxDepositAmount(game)
@@ -554,7 +564,7 @@ function App() {
             : best,
         )
       : undefined
-  const inventoryLeader = DRUGS.reduce<{
+  const inventoryLeader = drugs.reduce<{
     drugId: DrugId | null
     quantity: number
   }>(
@@ -576,7 +586,7 @@ function App() {
     },
   )
   const inventoryLeaderDrug = inventoryLeader.drugId
-    ? DRUGS.find((drug) => drug.id === inventoryLeader.drugId)
+    ? drugs.find((drug) => drug.id === inventoryLeader.drugId)
     : undefined
   const featuredModifierDrug =
     liveOffers.find((drug) => game.market[drug.id].modifier !== 'standard') ??
@@ -613,7 +623,7 @@ function App() {
           <p className="eyebrow">Operational dashboard</p>
           <h1>Local Dope Wars</h1>
           <p className="hero__lede">
-            The Gwinnett starter map is still the active default pack, but the
+            The {content.shortLabel} starter map is still the active default pack, but the
             run now carries proper persistence, a working bank layer, and a
             clean way to close the books when the thirty-day clock runs out.
           </p>
@@ -963,7 +973,7 @@ function App() {
           <div className="panel__header">
             <div>
               <p className="eyebrow">Territory scene</p>
-              <h2>Gwinnett network</h2>
+              <h2>{content.map.title}</h2>
             </div>
             <div className="heat-cluster">
               <span className="heat-cluster__label">{heatLabel(currentCity.cops)}</span>
@@ -978,7 +988,8 @@ function App() {
 
           <div className="city-panel__body">
             <MapScene
-              cities={CITIES}
+              map={content.map}
+              cities={cities}
               currentCityId={game.currentCityId}
               focusedCityId={focusedCityId}
               disableTravel={runClosed}
@@ -1062,7 +1073,7 @@ function App() {
         </div>
 
         <div className="offer-grid">
-          {DRUGS.map((drug) => {
+          {drugs.map((drug) => {
             const offer = game.market[drug.id]
             const inventory = game.inventory[drug.id]
             const maxBuy = getMaxBuyQuantity(game, drug.id)

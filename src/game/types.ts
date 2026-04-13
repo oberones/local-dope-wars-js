@@ -1,25 +1,6 @@
-export type DrugId =
-  | 'acid'
-  | 'cocaine'
-  | 'wax'
-  | 'heroin'
-  | 'spice'
-  | 'ecstasy'
-  | 'oxy'
-  | 'meth'
-  | 'shrooms'
-  | 'fentanyl'
-  | 'marijuana'
-
-export type CityId =
-  | 'duluth'
-  | 'suwanee'
-  | 'norcross'
-  | 'snellville'
-  | 'lawrenceville'
-  | 'lilburn'
-  | 'grayson'
-  | 'dacula'
+export type DrugId = string
+export type CityId = string
+export type ContentPackId = string
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
@@ -61,6 +42,30 @@ export interface CityDefinition {
   tagline: string
 }
 
+export interface MapDistrictDefinition {
+  id: string
+  label: string
+  subtitle: string
+  points: string
+  cityIds: CityId[]
+  fill: string
+}
+
+export interface MapLabelDefinition {
+  x: number
+  y: number
+  text: string
+}
+
+export interface MapSceneDefinition {
+  title: string
+  ariaLabel: string
+  routes: Array<[CityId, CityId]>
+  districts: MapDistrictDefinition[]
+  arterials: string[]
+  labels: MapLabelDefinition[]
+}
+
 export interface MarketOffer {
   drugId: DrugId
   available: boolean
@@ -85,6 +90,7 @@ export interface ActivityItem {
 export interface GameState {
   runId: string
   createdAt: string
+  contentPackId: ContentPackId
   day: number
   endDay: number
   debt: number
@@ -109,6 +115,8 @@ export interface ScoreTier {
 
 export interface RunSummary {
   runId: string
+  contentPackId: ContentPackId
+  contentLabel: string
   day: number
   endDay: number
   cityId: CityId
@@ -126,4 +134,14 @@ export interface RunSummary {
 
 export interface HighScoreEntry extends RunSummary {
   recordedAt: string
+}
+
+export interface ContentPackDefinition {
+  id: ContentPackId
+  label: string
+  shortLabel: string
+  map: MapSceneDefinition
+  cities: CityDefinition[]
+  drugs: DrugDefinition[]
+  scoreTiers: ScoreTier[]
 }

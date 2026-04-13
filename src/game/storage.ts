@@ -1,4 +1,4 @@
-import { CITIES, DRUGS } from './content'
+import { getContentPack, hasContentPack } from './content'
 import type { GameState, HighScoreEntry } from './types'
 
 const SAVE_KEY = 'local-dope-wars.active-run.v1'
@@ -29,25 +29,25 @@ function isActivityItem(value: unknown) {
   )
 }
 
-function isInventoryRecord(value: unknown) {
+function isInventoryRecord(value: unknown, drugIds: string[]) {
   if (!isRecord(value)) {
     return false
   }
 
-  return DRUGS.every((drug) => typeof value[drug.id] === 'number')
+  return drugIds.every((drugId) => typeof value[drugId] === 'number')
 }
 
-function isMarketRecord(value: unknown) {
+function isMarketRecord(value: unknown, drugIds: string[]) {
   if (!isRecord(value)) {
     return false
   }
 
-  return DRUGS.every((drug) => {
-    const offer = value[drug.id]
+  return drugIds.every((drugId) => {
+    const offer = value[drugId]
 
     return (
       isRecord(offer) &&
-      offer.drugId === drug.id &&
+      offer.drugId === drugId &&
       typeof offer.available === 'boolean' &&
       typeof offer.price === 'number' &&
       typeof offer.modifier === 'string'
@@ -56,8 +56,19 @@ function isMarketRecord(value: unknown) {
 }
 
 function isGameState(value: unknown): value is GameState {
+  if (
+    !isRecord(value) ||
+    typeof value.contentPackId !== 'string' ||
+    !hasContentPack(value.contentPackId)
+  ) {
+    return false
+  }
+
+  const content = getContentPack(value.contentPackId)
+  const drugIds = content.drugs.map((drug) => drug.id)
+  const cityIds = content.cities.map((city) => city.id)
+
   return (
-    isRecord(value) &&
     typeof value.runId === 'string' &&
     typeof value.createdAt === 'string' &&
     typeof value.day === 'number' &&
@@ -69,9 +80,9 @@ function isGameState(value: unknown): value is GameState {
     typeof value.totalSpace === 'number' &&
     typeof value.cash === 'number' &&
     typeof value.currentCityId === 'string' &&
-    CITIES.some((city) => city.id === value.currentCityId) &&
-    isInventoryRecord(value.inventory) &&
-    isMarketRecord(value.market) &&
+    cityIds.includes(value.currentCityId) &&
+    isInventoryRecord(value.inventory, drugIds) &&
+    isMarketRecord(value.market, drugIds) &&
     Array.isArray(value.news) &&
     value.news.every(isNewsItem) &&
     typeof value.newsCursor === 'number' &&
@@ -85,6 +96,9 @@ function isHighScoreEntry(value: unknown): value is HighScoreEntry {
   return (
     isRecord(value) &&
     typeof value.runId === 'string' &&
+    typeof value.contentPackId === 'string' &&
+    hasContentPack(value.contentPackId) &&
+    typeof value.contentLabel === 'string' &&
     typeof value.day === 'number' &&
     typeof value.endDay === 'number' &&
     typeof value.cityId === 'string' &&

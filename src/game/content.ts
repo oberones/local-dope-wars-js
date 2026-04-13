@@ -1,10 +1,13 @@
 import type {
   CityDefinition,
+  ContentPackDefinition,
+  ContentPackId,
   DrugDefinition,
   ScoreTier,
 } from './types'
 
 export const GAME_CONFIG = {
+  defaultContentPackId: 'gwinnett-county',
   startingCityId: 'lawrenceville',
   startingCash: 2000,
   startingDebt: 5500,
@@ -18,7 +21,7 @@ export const GAME_CONFIG = {
   maxDebt: 20000,
 } as const
 
-export const DRUGS: DrugDefinition[] = [
+const GWINNETT_DRUGS: DrugDefinition[] = [
   {
     id: 'acid',
     label: 'Acid',
@@ -81,7 +84,8 @@ export const DRUGS: DrugDefinition[] = [
     cheap: {
       min: 2,
       max: 15,
-      headline: 'Some basement chemists just dumped a load of spice onto the strip.',
+      headline:
+        'Some basement chemists just dumped a load of spice onto the strip.',
     },
   },
   {
@@ -100,7 +104,8 @@ export const DRUGS: DrugDefinition[] = [
     expensive: {
       min: 34000,
       max: 68000,
-      headline: 'A local plug overdosed. Oxy is impossibly expensive tonight.',
+      headline:
+        'A local plug overdosed. Oxy is impossibly expensive tonight.',
     },
   },
   {
@@ -143,13 +148,14 @@ export const DRUGS: DrugDefinition[] = [
   },
 ]
 
-export const CITIES: CityDefinition[] = [
+const GWINNETT_CITIES: CityDefinition[] = [
   {
     id: 'duluth',
     label: 'Duluth',
     district: 'Gas South corridor',
     landmark: 'Arena spillover and hotel exits',
-    atmosphere: 'Clean surfaces, event traffic, and windows that open after crowds break.',
+    atmosphere:
+      'Clean surfaces, event traffic, and windows that open after crowds break.',
     signature: 'Best for quick flips when venue nights let out.',
     cops: 10,
     minDrugs: 5,
@@ -162,7 +168,8 @@ export const CITIES: CityDefinition[] = [
     label: 'Suwanee',
     district: 'Town Center',
     landmark: 'Greenway edges and polished retail lanes',
-    atmosphere: 'Quiet money, polished sidewalks, and a market that prefers low drama.',
+    atmosphere:
+      'Quiet money, polished sidewalks, and a market that prefers low drama.',
     signature: 'Low heat makes it ideal for steady accumulation plays.',
     cops: 5,
     minDrugs: 7,
@@ -174,7 +181,8 @@ export const CITIES: CityDefinition[] = [
     label: 'Norcross',
     district: 'Historic downtown edge',
     landmark: 'Older corridors and fast connection points',
-    atmosphere: 'Dense movement, layered side streets, and a market that shifts by the hour.',
+    atmosphere:
+      'Dense movement, layered side streets, and a market that shifts by the hour.',
     signature: 'A good node for volume if you stay nimble.',
     cops: 15,
     minDrugs: 6,
@@ -186,68 +194,79 @@ export const CITIES: CityDefinition[] = [
     label: 'Snellville',
     district: 'Scenic Highway',
     landmark: 'Bright roads and suburban visibility',
-    atmosphere: 'Every move feels exposed here, but the payouts can spike when supply thins.',
+    atmosphere:
+      'Every move feels exposed here, but the payouts can spike when supply thins.',
     signature: 'High-risk pressure cooker with occasional massive upside.',
     cops: 80,
     minDrugs: 4,
     map: { x: 64, y: 66 },
-    tagline: 'High visibility and suburban scrutiny make every move loud.',
+    tagline:
+      'High visibility and suburban scrutiny make every move loud.',
   },
   {
     id: 'lawrenceville',
     label: 'Lawrenceville',
     district: 'Downtown square',
     landmark: 'Courthouse blocks and side-street churn',
-    atmosphere: 'The center of gravity: crowded enough to work, exposed enough to punish mistakes.',
+    atmosphere:
+      'The center of gravity: crowded enough to work, exposed enough to punish mistakes.',
     signature: 'Home base for timing runs across the county.',
     cops: 30,
     minDrugs: 6,
     map: { x: 47, y: 47 },
-    tagline: 'The home base: courthouse traffic, side streets, and steady churn.',
+    tagline:
+      'The home base: courthouse traffic, side streets, and steady churn.',
   },
   {
     id: 'lilburn',
     label: 'Lilburn',
     district: 'Old Town',
     landmark: 'Tight roads and compressed sightlines',
-    atmosphere: 'A tense pocket where heat rises quickly and panic changes prices fast.',
+    atmosphere:
+      'A tense pocket where heat rises quickly and panic changes prices fast.',
     signature: 'Great for chasing volatility if you can handle the pressure.',
     cops: 70,
     minDrugs: 4,
     maxDrugs: 10,
     map: { x: 39, y: 63 },
-    tagline: 'Tighter roads, tighter nerves, and occasional price explosions.',
+    tagline:
+      'Tighter roads, tighter nerves, and occasional price explosions.',
   },
   {
     id: 'grayson',
     label: 'Grayson',
     district: 'Rosebud Road belt',
     landmark: 'Residential sprawl and long approach roads',
-    atmosphere: 'Spread-out routes create room to breathe if your timing is right.',
+    atmosphere:
+      'Spread-out routes create room to breathe if your timing is right.',
     signature: 'Good for medium-risk repositioning and longer plays.',
     cops: 70,
     minDrugs: 6,
     map: { x: 67, y: 54 },
-    tagline: 'Residential sprawl creates opportunity if you can stay invisible.',
+    tagline:
+      'Residential sprawl creates opportunity if you can stay invisible.',
   },
   {
     id: 'dacula',
     label: 'Dacula',
     district: 'Harbins frontier',
     landmark: 'Outer-county lanes and wider buffers',
-    atmosphere: 'The edge of the board, where movement slows down and bigger jumps become possible.',
-    signature: 'Useful for escaping pressure and resetting the run tempo.',
+    atmosphere:
+      'The edge of the board, where movement slows down and bigger jumps become possible.',
+    signature:
+      'Useful for escaping pressure and resetting the run tempo.',
     cops: 20,
     minDrugs: 5,
     map: { x: 82, y: 36 },
-    tagline: 'Wider lanes, lower pressure, and room to make bigger jumps.',
+    tagline:
+      'Wider lanes, lower pressure, and room to make bigger jumps.',
   },
 ]
 
-export const SCORE_TIERS: ScoreTier[] = [
+const GWINNETT_SCORE_TIERS: ScoreTier[] = [
   {
     threshold: 100000000,
-    message: "Come on, you definitely cheated to get there.",
+    message: 'Come on, you definitely cheated to get there.',
   },
   {
     threshold: 1000000,
@@ -307,18 +326,120 @@ export const SCORE_TIERS: ScoreTier[] = [
   },
 ]
 
-export const CITIES_BY_ID = CITIES.reduce(
-  (lookup, city) => {
-    lookup[city.id] = city
+export const GWINNETT_CONTENT_PACK: ContentPackDefinition = {
+  id: 'gwinnett-county',
+  label: 'Gwinnett County',
+  shortLabel: 'Gwinnett',
+  map: {
+    title: 'Gwinnett network',
+    ariaLabel: 'Illustrated Gwinnett County market map',
+    routes: [
+      ['suwanee', 'duluth'],
+      ['duluth', 'lawrenceville'],
+      ['lawrenceville', 'dacula'],
+      ['lawrenceville', 'grayson'],
+      ['lawrenceville', 'snellville'],
+      ['lawrenceville', 'lilburn'],
+      ['duluth', 'norcross'],
+      ['norcross', 'lilburn'],
+      ['lilburn', 'snellville'],
+    ],
+    districts: [
+      {
+        id: 'northwest',
+        label: 'Norcross / Duluth',
+        subtitle: 'Older corridors',
+        points: '14,31 28,18 42,21 40,41 20,46 10,39',
+        cityIds: ['norcross', 'duluth'],
+        fill: 'rgba(56, 189, 248, 0.09)',
+      },
+      {
+        id: 'north',
+        label: 'Suwanee / Dacula',
+        subtitle: 'Wide-lane expansion',
+        points: '41,21 58,11 84,23 84,39 71,42 40,41',
+        cityIds: ['suwanee', 'dacula'],
+        fill: 'rgba(34, 197, 94, 0.08)',
+      },
+      {
+        id: 'core',
+        label: 'Lawrenceville core',
+        subtitle: 'Courthouse gravity',
+        points: '20,46 40,41 71,42 69,62 31,67 15,57',
+        cityIds: ['lawrenceville', 'grayson'],
+        fill: 'rgba(244, 197, 93, 0.1)',
+      },
+      {
+        id: 'south',
+        label: 'Lilburn / Snellville',
+        subtitle: 'Heat-heavy suburbs',
+        points: '15,57 31,67 69,62 77,82 33,86 13,72',
+        cityIds: ['lilburn', 'snellville'],
+        fill: 'rgba(249, 115, 22, 0.08)',
+      },
+    ],
+    arterials: [
+      'M18 39 C26 34, 34 30, 42 28 C53 25, 63 24, 78 26',
+      'M21 49 C30 49, 39 49, 49 48 C61 47, 71 48, 79 54',
+      'M30 18 C38 25, 44 31, 48 40 C52 49, 58 60, 70 78',
+      'M16 67 C30 61, 42 57, 57 56 C67 55, 75 58, 84 63',
+    ],
+    labels: [
+      { x: 19, y: 28, text: 'Historic routes' },
+      { x: 62, y: 17, text: 'Expansion belt' },
+      { x: 48, y: 46, text: 'Downtown grid' },
+      { x: 58, y: 75, text: 'Suburban pressure' },
+    ],
+  },
+  cities: GWINNETT_CITIES,
+  drugs: GWINNETT_DRUGS,
+  scoreTiers: GWINNETT_SCORE_TIERS,
+}
+
+export const CONTENT_PACKS: ContentPackDefinition[] = [GWINNETT_CONTENT_PACK]
+
+export const CONTENT_PACKS_BY_ID = CONTENT_PACKS.reduce(
+  (lookup, pack) => {
+    lookup[pack.id] = {
+      ...pack,
+      citiesById: pack.cities.reduce(
+        (cityLookup, city) => {
+          cityLookup[city.id] = city
+          return cityLookup
+        },
+        {} as Record<CityDefinition['id'], CityDefinition>,
+      ),
+      drugsById: pack.drugs.reduce(
+        (drugLookup, drug) => {
+          drugLookup[drug.id] = drug
+          return drugLookup
+        },
+        {} as Record<DrugDefinition['id'], DrugDefinition>,
+      ),
+    }
     return lookup
   },
-  {} as Record<CityDefinition['id'], CityDefinition>,
+  {} as Record<
+    ContentPackId,
+    ContentPackDefinition & {
+      citiesById: Record<CityDefinition['id'], CityDefinition>
+      drugsById: Record<DrugDefinition['id'], DrugDefinition>
+    }
+  >,
 )
 
-export const DRUGS_BY_ID = DRUGS.reduce(
-  (lookup, drug) => {
-    lookup[drug.id] = drug
-    return lookup
-  },
-  {} as Record<DrugDefinition['id'], DrugDefinition>,
-)
+export const DEFAULT_CONTENT_PACK = CONTENT_PACKS_BY_ID[GAME_CONFIG.defaultContentPackId]
+
+export function hasContentPack(packId: string) {
+  return packId in CONTENT_PACKS_BY_ID
+}
+
+export function getContentPack(packId: ContentPackId) {
+  return CONTENT_PACKS_BY_ID[packId] ?? DEFAULT_CONTENT_PACK
+}
+
+export const CITIES = DEFAULT_CONTENT_PACK.cities
+export const DRUGS = DEFAULT_CONTENT_PACK.drugs
+export const SCORE_TIERS = DEFAULT_CONTENT_PACK.scoreTiers
+export const CITIES_BY_ID = DEFAULT_CONTENT_PACK.citiesById
+export const DRUGS_BY_ID = DEFAULT_CONTENT_PACK.drugsById

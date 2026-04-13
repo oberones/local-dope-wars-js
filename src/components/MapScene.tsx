@@ -1,63 +1,6 @@
 import type { CSSProperties, KeyboardEvent } from 'react'
 import './MapScene.css'
-import type { CityDefinition, CityId } from '../game/types'
-
-const ROUTES: Array<[CityId, CityId]> = [
-  ['suwanee', 'duluth'],
-  ['duluth', 'lawrenceville'],
-  ['lawrenceville', 'dacula'],
-  ['lawrenceville', 'grayson'],
-  ['lawrenceville', 'snellville'],
-  ['lawrenceville', 'lilburn'],
-  ['duluth', 'norcross'],
-  ['norcross', 'lilburn'],
-  ['lilburn', 'snellville'],
-]
-
-const DISTRICTS = [
-  {
-    id: 'northwest',
-    label: 'Norcross / Duluth',
-    subtitle: 'Older corridors',
-    points: '14,31 28,18 42,21 40,41 20,46 10,39',
-    cityIds: ['norcross', 'duluth'] as CityId[],
-  },
-  {
-    id: 'north',
-    label: 'Suwanee / Dacula',
-    subtitle: 'Wide-lane expansion',
-    points: '41,21 58,11 84,23 84,39 71,42 40,41',
-    cityIds: ['suwanee', 'dacula'] as CityId[],
-  },
-  {
-    id: 'core',
-    label: 'Lawrenceville core',
-    subtitle: 'Courthouse gravity',
-    points: '20,46 40,41 71,42 69,62 31,67 15,57',
-    cityIds: ['lawrenceville', 'grayson'] as CityId[],
-  },
-  {
-    id: 'south',
-    label: 'Lilburn / Snellville',
-    subtitle: 'Heat-heavy suburbs',
-    points: '15,57 31,67 69,62 77,82 33,86 13,72',
-    cityIds: ['lilburn', 'snellville'] as CityId[],
-  },
-] as const
-
-const ARTERIALS = [
-  'M18 39 C26 34, 34 30, 42 28 C53 25, 63 24, 78 26',
-  'M21 49 C30 49, 39 49, 49 48 C61 47, 71 48, 79 54',
-  'M30 18 C38 25, 44 31, 48 40 C52 49, 58 60, 70 78',
-  'M16 67 C30 61, 42 57, 57 56 C67 55, 75 58, 84 63',
-] as const
-
-const LABELS = [
-  { x: 19, y: 28, text: 'Historic routes' },
-  { x: 62, y: 17, text: 'Expansion belt' },
-  { x: 48, y: 46, text: 'Downtown grid' },
-  { x: 58, y: 75, text: 'Suburban pressure' },
-] as const
+import type { CityDefinition, CityId, MapSceneDefinition } from '../game/types'
 
 function getCityById(cities: CityDefinition[], cityId: CityId) {
   return cities.find((city) => city.id === cityId) ?? cities[0]
@@ -76,6 +19,7 @@ function nodeTint(cops: number) {
 }
 
 interface MapSceneProps {
+  map: MapSceneDefinition
   cities: CityDefinition[]
   currentCityId: CityId
   focusedCityId: CityId
@@ -85,6 +29,7 @@ interface MapSceneProps {
 }
 
 export function MapScene({
+  map,
   cities,
   currentCityId,
   focusedCityId,
@@ -144,7 +89,7 @@ export function MapScene({
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         role="img"
-        aria-label="Illustrated Gwinnett County market map"
+        aria-label={map.ariaLabel}
       >
         <defs>
           <linearGradient id="county-amber-route" x1="0%" x2="100%">
@@ -169,22 +114,27 @@ export function MapScene({
           d="M18 13 L39 10 L58 12 L77 21 L88 34 L90 49 L86 66 L72 81 L55 90 L34 88 L18 75 L10 57 L10 36 Z"
         />
 
-        {DISTRICTS.map((district) => {
+        {map.districts.map((district) => {
           const isActive = district.cityIds.includes(currentCityId)
           const isFocused = district.cityIds.includes(focusedCityId)
 
           return (
             <polygon
               key={district.id}
-              className={`county-map__district county-map__district--${district.id}${
+              className={`county-map__district${
                 isActive ? ' is-active' : ''
               }${isFocused ? ' is-focused' : ''}`}
               points={district.points}
+              style={
+                {
+                  '--district-fill': district.fill,
+                } as CSSProperties
+              }
             />
           )
         })}
 
-        {ARTERIALS.map((path, index) => (
+        {map.arterials.map((path, index) => (
           <path
             key={path}
             className={`county-map__arterial county-map__arterial--${index + 1}`}
@@ -192,7 +142,7 @@ export function MapScene({
           />
         ))}
 
-        {ROUTES.map(([fromId, toId]) => {
+        {map.routes.map(([fromId, toId]) => {
           const from = getCityById(cities, fromId)
           const to = getCityById(cities, toId)
           const connectedToCurrent =
@@ -231,7 +181,7 @@ export function MapScene({
           />
         ) : null}
 
-        {LABELS.map((label) => (
+        {map.labels.map((label) => (
           <text
             key={`${label.text}-${label.x}`}
             className="county-map__scan-label"

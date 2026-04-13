@@ -1,14 +1,12 @@
 import {
-  CITIES_BY_ID,
-  DRUGS,
-  DRUGS_BY_ID,
   GAME_CONFIG,
-  SCORE_TIERS,
+  getContentPack,
 } from './content'
 import type {
   ActivityItem,
   ActivityKind,
   CityId,
+  ContentPackId,
   DrugId,
   GameState,
   MarketOffer,
@@ -44,21 +42,21 @@ function createRunId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function createInventoryRecord() {
-  return DRUGS.reduce(
+function createInventoryRecord(drugIds: DrugId[]) {
+  return drugIds.reduce(
     (inventory, drug) => {
-      inventory[drug.id] = 0
+      inventory[drug] = 0
       return inventory
     },
     {} as Record<DrugId, number>,
   )
 }
 
-function createMarketRecord() {
-  return DRUGS.reduce(
-    (market, drug) => {
-      market[drug.id] = {
-        drugId: drug.id,
+function createMarketRecord(drugIds: DrugId[]) {
+  return drugIds.reduce(
+    (market, drugId) => {
+      market[drugId] = {
+        drugId,
         available: false,
         price: 0,
         modifier: 'standard',
@@ -146,19 +144,20 @@ function buildHeadline(trigger: MarketTrigger | undefined) {
   return trigger.headline
 }
 
-function buildMarket(cityId: CityId) {
-  const city = CITIES_BY_ID[cityId]
-  const market = createMarketRecord()
+function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) {
+  const content = getContentPack(contentPackId)
+  const city = content.citiesById[cityId] ?? content.cities[0]
+  const market = createMarketRecord(content.drugs.map((drug) => drug.id))
   const availableCount = randomInt(
     city.minDrugs,
-    city.maxDrugs ?? DRUGS.length,
+    city.maxDrugs ?? content.drugs.length,
   )
   const activeIds = new Set(
-    shuffle(DRUGS.map((drug) => drug.id)).slice(0, availableCount),
+    shuffle(content.drugs.map((drug) => drug.id)).slice(0, availableCount),
   )
   const bulletins: Array<{ tone: NewsTone; text: string }> = []
 
-  for (const drug of DRUGS) {
+  for (const drug of content.drugs) {
     if (!activeIds.has(drug.id)) {
       continue
     }
@@ -204,11 +203,22 @@ function buildMarket(cityId: CityId) {
   return { market, bulletins }
 }
 
-export function createNewGame(): GameState {
-  const { market, bulletins } = buildMarket(GAME_CONFIG.startingCityId)
+export function createNewGame(contentPackId = GAME_CONFIG.defaultContentPackId): GameState {
+  const content = getContentPack(contentPackId)
+  const startingCityId =
+    content.citiesById[GAME_CONFIG.startingCityId] ?
+      GAME_CONFIG.startingCityId
+    : content.cities[0]?.id
+
+  if (!startingCityId) {
+    throw new Error(`Content pack "${content.id}" has no cities.`)
+  }
+
+  const { market, bulletins } = buildMarket(content.id, startingCityId)
   const initialState: GameState = {
     runId: createRunId(),
     createdAt: new Date().toISOString(),
+    contentPackId: content.id,
     day: 1,
     endDay: GAME_CONFIG.endDay,
     debt: GAME_CONFIG.startingDebt,
@@ -217,8 +227,8 @@ export function createNewGame(): GameState {
     health: GAME_CONFIG.maxHealth,
     totalSpace: GAME_CONFIG.totalSpace,
     cash: GAME_CONFIG.startingCash,
-    currentCityId: GAME_CONFIG.startingCityId,
-    inventory: createInventoryRecord(),
+    currentCityId: startingCityId,
+    inventory: createInventoryRecord(content.drugs.map((drug) => drug.id)),
     market,
     news: [],
     newsCursor: 0,
@@ -230,7 +240,7 @@ export function createNewGame(): GameState {
     news: [
       {
         tone: 'system',
-        text: 'Fresh off the curb in Lawrenceville. Thirty days to stack cash.',
+        text: `Fresh off the curb in ${content.citiesById[startingCityId]?.label ?? startingCityId}. Thirty days to stack cash.`,
       },
       ...bulletins,
     ],
@@ -239,14 +249,15 @@ export function createNewGame(): GameState {
         initialState,
         'run',
         'Run started',
-        `Opened the Gwinnett run with ${formatMoney(initialState.cash)} cash and ${formatMoney(initialState.debt)} in debt.`,
+        `Opened the ${content.shortLabel} run with ${formatMoney(initialState.cash)} cash and ${formatMoney(initialState.debt)} in debt.`,
       ),
     ],
   })
 }
 
 export function getCurrentCity(state: GameState) {
-  return CITIES_BY_ID[state.currentCityId]
+  const content = getContentPack(state.contentPackId)
+  return content.citiesById[state.currentCityId] ?? content.cities[0]
 }
 
 export function getUsedSpace(state: GameState) {
@@ -261,7 +272,9 @@ export function getAvailableSpace(state: GameState) {
 }
 
 export function getInventoryValue(state: GameState) {
-  return DRUGS.reduce((total, drug) => {
+  const content = getContentPack(state.contentPackId)
+
+  return content.drugs.reduce((total, drug) => {
     const offer = state.market[drug.id]
 
     if (!offer.available) {
@@ -313,18 +326,26 @@ export function getNetWorth(state: GameState) {
   return state.cash + state.bankDeposit + getInventoryValue(state) - state.debt
 }
 
-export function getScoreTier(score: number) {
+export function getScoreTier(
+  score: number,
+  contentPackId: ContentPackId = GAME_CONFIG.defaultContentPackId,
+) {
+  const content = getContentPack(contentPackId)
+
   return (
-    SCORE_TIERS.find((tier) => score >= tier.threshold) ??
-    SCORE_TIERS[SCORE_TIERS.length - 1]
+    content.scoreTiers.find((tier) => score >= tier.threshold) ??
+    content.scoreTiers[content.scoreTiers.length - 1]
   )
 }
 
 export function buildRunSummary(state: GameState): RunSummary {
   const score = getNetWorth(state)
+  const content = getContentPack(state.contentPackId)
 
   return {
     runId: state.runId,
+    contentPackId: state.contentPackId,
+    contentLabel: content.label,
     day: state.day,
     endDay: state.endDay,
     cityId: state.currentCityId,
@@ -337,7 +358,7 @@ export function buildRunSummary(state: GameState): RunSummary {
     stashUsed: getUsedSpace(state),
     totalSpace: state.totalSpace,
     score,
-    tierMessage: getScoreTier(score).message,
+    tierMessage: getScoreTier(score, state.contentPackId).message,
   }
 }
 
@@ -368,8 +389,9 @@ export function travelToCity(state: GameState, cityId: CityId) {
     })
   }
 
-  const city = CITIES_BY_ID[cityId]
-  const { market, bulletins } = buildMarket(cityId)
+  const content = getContentPack(state.contentPackId)
+  const city = content.citiesById[cityId] ?? content.cities[0]
+  const { market, bulletins } = buildMarket(state.contentPackId, cityId)
   const nextState: GameState = {
     ...state,
     currentCityId: cityId,
@@ -422,7 +444,8 @@ export function buyDrug(
   }
 
   const offer = state.market[drugId]
-  const drug = DRUGS_BY_ID[drugId]
+  const content = getContentPack(state.contentPackId)
+  const drug = content.drugsById[drugId]
 
   if (!offer.available) {
     return applyUpdates(state, {
@@ -503,7 +526,8 @@ export function sellDrug(
   }
 
   const offer = state.market[drugId]
-  const drug = DRUGS_BY_ID[drugId]
+  const content = getContentPack(state.contentPackId)
+  const drug = content.drugsById[drugId]
 
   if (!offer.available) {
     return applyUpdates(state, {
