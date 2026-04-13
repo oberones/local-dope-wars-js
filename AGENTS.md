@@ -1,21 +1,24 @@
 # AGENTS.md
 
-This file applies to the greenfield app in `/Users/oberon/Projects/coding/javascript/gwinnett-dope-wars/modern`.
+This file applies to the greenfield app in `/Users/oberon/Projects/coding/javascript/local-dope-wars/`.
 
 ## Purpose
 
-This is the modern rebuild of the Gwinnett County Dope Wars project.
+This is the modern rebuild of the classic Dope Wars project, now branded as Local Dope Wars.
 
-- Treat the legacy app in the repo root as reference material only.
+- The current built-in setting should continue to default to the existing Gwinnett County content unless deliberately changed.
+- The long-term goal is to make locations and related content customizable without baking one county's data into the architecture.
+- Treat the legacy app in the sibling folder `../gwinnett-dope-wars/` as reference material only.
 - Do not wire the new app directly to legacy runtime files.
 - Port ideas and content from the legacy project into typed modules in this app.
 
 ## Core Principles
 
 1. Keep gameplay logic separate from presentation.
-2. Keep the visual direction intentional, cinematic, and specific to Gwinnett County.
+2. Keep the visual direction intentional, cinematic, and grounded in the default Gwinnett County setting while allowing future location packs to swap in their own content and presentation.
 3. Prefer extending typed domain modules over embedding ad hoc strings or magic values in React components.
 4. Avoid reintroducing jQuery-style DOM coupling or legacy script-tag patterns.
+5. Prefer data-driven content and configuration hooks over hard-coding the current default locations into React components.
 
 ## Architecture
 
@@ -24,7 +27,7 @@ This is the modern rebuild of the Gwinnett County Dope Wars project.
 - `src/game/types.ts`
   Shared domain types. Update this first when adding new structured data.
 - `src/game/content.ts`
-  Canonical city, drug, and score content.
+  Canonical default city, drug, and score content. Keep future customizable content aligned to the same typed shape.
 - `src/game/core.ts`
   Gameplay rules and state transitions. This layer should stay free of React, DOM access, and styling concerns.
 
@@ -52,7 +55,8 @@ This is the modern rebuild of the Gwinnett County Dope Wars project.
 
 - Make rule changes in `src/game/core.ts`.
 - If the change adds a new concept, update `src/game/types.ts`.
-- If the change adds or edits canonical drugs, cities, labels, or score tiers, update `src/game/content.ts`.
+- If the change adds or edits default drugs, cities, labels, score tiers, or other bundled content, update `src/game/content.ts`.
+- If the change introduces customizable location/content support, add it through typed game/domain modules instead of hiding it in React state or component markup.
 - Do not hide game rules inside React components.
 
 ### When changing the map
@@ -60,22 +64,25 @@ This is the modern rebuild of the Gwinnett County Dope Wars project.
 - Prefer editing `src/components/MapScene.tsx` and `src/components/MapScene.css`.
 - Keep route geometry, district overlays, and node interactions inside the map component.
 - If moving from SVG to Canvas or Pixi later, preserve the current component boundary so the rest of the app does not need to change much.
+- Keep map rendering flexible enough that the current Gwinnett scene can remain the default while future location sets can swap in their own geography.
 
 ### When changing styling
 
 - Preserve the current visual lane: warm noir, surveillance-board, suburban Georgia after dark.
 - Avoid generic SaaS styling, default purple gradients, or flattened dashboard aesthetics.
 - Use existing CSS variables and visual motifs before introducing unrelated styles.
+- When adding customizable themes or location packs, keep the default Gwinnett presentation strong instead of flattening everything into a generic neutral shell.
 
 ### When changing content
 
-- Preserve stable `CityId` and `DrugId` values unless a deliberate migration is required.
+- Preserve stable built-in `CityId` and `DrugId` values unless a deliberate migration is required.
 - If IDs change, update all dependent state and lookup logic in the same change.
-- Keep locations grounded in real Gwinnett County places.
+- Keep the default bundled locations grounded in real Gwinnett County places.
+- New customization work should make alternate locations possible without weakening the typed default content path.
 
 ## Guardrails
 
-- Do not import runtime code from `../assets/js/*.js`.
+- Do not import runtime code from `../gwinnett-dope-wars/assets/js/*.js`.
 - Do not rebuild the app around direct DOM manipulation.
 - Do not hand-edit generated output in `dist/`.
 - Do not make meaningful source changes inside `node_modules/`.
@@ -83,7 +90,7 @@ This is the modern rebuild of the Gwinnett County Dope Wars project.
 
 ## Dev Workflow
 
-Run from `/Users/oberon/Projects/coding/javascript/gwinnett-dope-wars/modern`:
+Run from `/Users/oberon/Projects/coding/javascript/local-dope-wars`:
 
 ```bash
 npm run dev
@@ -102,22 +109,25 @@ Before finishing meaningful source changes:
 - The app already has a pure typed game core.
 - The market loop supports travel, market generation, buying, selling, and run-value tracking.
 - The territory board is now a dedicated SVG scene component.
+- The current built-in content still defaults to the Gwinnett County location set.
+- Location customization has not been built yet, so the default map/content is still effectively hard-coded.
 - Text is still hard-coded in the new app and has not yet been moved to a modern i18n layer.
 - Save/load, cops, random encounters, weapons, bank depth, and endgame polish are still pending.
 
 ## Good Next Steps
 
-1. Add modern i18n support.
-2. Add persistent saves and high scores.
-3. Expand `src/game/core.ts` with cops, encounters, and financial systems.
-4. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
+1. Add a typed customization layer for locations/content while keeping the current Gwinnett values as the built-in defaults.
+2. Add modern i18n support.
+3. Add persistent saves and high scores.
+4. Expand `src/game/core.ts` with cops, encounters, and financial systems.
+5. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
 
 ## Legacy References
 
 Useful source material only:
 
-- `../assets/js/data.js`
-- `../assets/js/models.js`
-- `../locales/dopewars.en-US.properties`
+- `../gwinnett-dope-wars/assets/js/data.js`
+- `../gwinnett-dope-wars/assets/js/models.js`
+- `../gwinnett-dope-wars/locales/dopewars.en-US.properties`
 
 Port from them. Do not depend on them at runtime.
