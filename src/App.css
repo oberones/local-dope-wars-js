@@ -6,6 +6,11 @@
   gap: 1rem;
 }
 
+.shell--centered {
+  width: min(1180px, calc(100vw - 2rem));
+  align-content: start;
+}
+
 .panel {
   position: relative;
   overflow: hidden;
@@ -43,7 +48,13 @@
 .market-panel,
 .news-panel,
 .stat-card,
-.signal-card {
+.signal-card,
+.launch-screen,
+.launch-card,
+.summary-screen,
+.finance-panel,
+.activity-panel,
+.run-status {
   position: relative;
   z-index: 1;
 }
@@ -190,7 +201,18 @@
   box-shadow: 0 16px 34px rgba(249, 115, 22, 0.18);
 }
 
-.stats-grid,
+.hero__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .signal-grid {
   display: grid;
   gap: 1rem;
@@ -225,6 +247,323 @@
 
 .signal-card__meta {
   margin: 0.5rem 0 0;
+}
+
+.launch-screen,
+.summary-screen,
+.launch-card,
+.run-status,
+.finance-panel,
+.activity-panel {
+  padding: 1.4rem;
+}
+
+.launch-screen {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+}
+
+.launch-screen__card {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  padding: 1.15rem;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(246, 235, 219, 0.06), rgba(246, 235, 219, 0.03)),
+    rgba(246, 235, 219, 0.04);
+  border: 1px solid rgba(246, 235, 219, 0.08);
+}
+
+.launch-screen__summary,
+.summary-screen__lede,
+.run-status__copy,
+.empty-state {
+  color: var(--muted);
+}
+
+.launch-screen__actions,
+.summary-screen__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.2rem;
+}
+
+.launch-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feature-list,
+.scoreboard {
+  position: relative;
+  z-index: 1;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.feature-list li,
+.scoreboard__item,
+.summary-stat,
+.finance-summary-card,
+.activity-item,
+.run-status__actions {
+  border-radius: 18px;
+  border: 1px solid rgba(246, 235, 219, 0.08);
+  background: rgba(12, 13, 14, 0.52);
+}
+
+.feature-list li {
+  padding: 0.95rem 1rem;
+}
+
+.scoreboard__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  padding: 0.95rem 1rem;
+}
+
+.scoreboard__rank,
+.scoreboard__title,
+.scoreboard__detail,
+.scoreboard__score strong,
+.scoreboard__score span,
+.activity-item__title,
+.activity-item__detail,
+.activity-item__meta {
+  margin: 0;
+}
+
+.scoreboard__rank,
+.activity-item__meta {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.scoreboard__title {
+  margin-top: 0.25rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.scoreboard__detail {
+  margin-top: 0.35rem;
+  color: var(--muted);
+}
+
+.scoreboard__score {
+  text-align: right;
+}
+
+.scoreboard__score strong {
+  display: block;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.scoreboard__score span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.summary-screen__chips {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.summary-screen__chips span {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 241, 232, 0.12);
+  background: rgba(247, 241, 232, 0.05);
+  color: var(--text);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.summary-screen__stats {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1.25rem;
+}
+
+.summary-stat,
+.finance-summary-card {
+  padding: 1rem;
+}
+
+.summary-stat p:last-child,
+.finance-summary-card p:last-child,
+.run-status__value {
+  margin: 0.25rem 0 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.run-status {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.9fr);
+  align-items: center;
+}
+
+.run-status__actions {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.ops-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+}
+
+.finance-panel__summary,
+.finance-panel__grid {
+  position: relative;
+  z-index: 1;
+}
+
+.finance-panel__summary {
+  margin-top: 1.15rem;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.finance-panel__grid {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.finance-control {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(246, 235, 219, 0.08);
+  background: rgba(12, 13, 14, 0.46);
+}
+
+.finance-control span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.finance-control__row {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.finance-control input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid rgba(246, 235, 219, 0.14);
+  background: rgba(246, 235, 219, 0.06);
+  color: var(--text);
+  padding: 0.85rem 0.95rem;
+  font: inherit;
+}
+
+.finance-control input:focus {
+  outline: 2px solid rgba(249, 115, 22, 0.34);
+  border-color: rgba(249, 115, 22, 0.55);
+}
+
+.finance-control__hint,
+.offer-card__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.finance-control__hint--error,
+.offer-card__hint--error {
+  color: #fca5a5;
+}
+
+.activity-list {
+  position: relative;
+  z-index: 1;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.activity-item {
+  position: relative;
+  padding: 0.95rem 1rem 0.95rem 1.2rem;
+  overflow: hidden;
+}
+
+.activity-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--activity-accent);
+}
+
+.activity-item--run {
+  --activity-accent: #f4c95d;
+}
+
+.activity-item--travel {
+  --activity-accent: #38bdf8;
+}
+
+.activity-item--trade {
+  --activity-accent: #34d399;
+}
+
+.activity-item--finance {
+  --activity-accent: #f97316;
+}
+
+.activity-item__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.activity-item__title {
+  margin-top: 0.45rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.activity-item__detail {
+  margin-top: 0.35rem;
+  color: var(--muted);
 }
 
 .overview-grid {
@@ -705,6 +1044,10 @@
   border-color: rgba(249, 115, 22, 0.55);
 }
 
+.offer-card__hint {
+  margin-top: 0.75rem;
+}
+
 .offer-card__actions {
   display: grid;
   gap: 0.7rem;
@@ -730,13 +1073,27 @@
 }
 
 .accent-button {
-  background: linear-gradient(135deg, var(--offer-accent), #f4c95d);
+  background: linear-gradient(135deg, var(--offer-accent, #f97316), #f4c95d);
   color: #1f150e;
+  border-color: rgba(249, 115, 22, 0.35);
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.18);
 }
 
 .accent-button--secondary {
   background: linear-gradient(135deg, #1fbba6, #8fffd2);
+}
+
+.launch-screen__actions .accent-button,
+.summary-screen__actions .accent-button,
+.run-status__actions .accent-button,
+.city-brief__action {
+  box-shadow:
+    0 18px 38px rgba(249, 115, 22, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.launch-screen__actions .accent-button {
+  min-width: 180px;
 }
 
 .ghost-button:disabled,
@@ -748,6 +1105,13 @@
 }
 
 @media (max-width: 1180px) {
+  .launch-screen,
+  .launch-grid,
+  .summary-screen__stats,
+  .ops-grid,
+  .finance-panel__summary,
+  .finance-panel__grid,
+  .run-status,
   .hero,
   .overview-grid,
   .city-panel__body {
@@ -782,20 +1146,42 @@
   .hero__meta-row,
   .stats-grid,
   .signal-grid,
-  .offer-grid {
+  .offer-grid,
+  .summary-screen__stats,
+  .finance-panel__summary,
+  .finance-panel__grid,
+  .launch-grid {
     grid-template-columns: 1fr;
   }
 
   .panel__header,
   .offer-card__top,
   .offer-card__stats,
-  .progress-cluster__copy {
+  .progress-cluster__copy,
+  .scoreboard__item,
+  .activity-item__meta,
+  .run-status__actions {
     flex-direction: column;
     align-items: start;
   }
 
   .offer-card__price-block {
     text-align: left;
+  }
+
+  .hero__actions,
+  .launch-screen__actions,
+  .summary-screen__actions {
+    width: 100%;
+  }
+
+  .hero__actions .ghost-button,
+  .hero__actions .hero__reset,
+  .launch-screen__actions .ghost-button,
+  .launch-screen__actions .accent-button,
+  .summary-screen__actions .ghost-button,
+  .summary-screen__actions .accent-button {
+    width: 100%;
   }
 
   .map-node {

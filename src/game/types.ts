@@ -23,6 +23,7 @@ export type CityId =
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
+export type ActivityKind = 'run' | 'travel' | 'trade' | 'finance'
 
 export interface PriceBand {
   min: number
@@ -73,7 +74,17 @@ export interface NewsItem {
   text: string
 }
 
+export interface ActivityItem {
+  id: number
+  day: number
+  kind: ActivityKind
+  title: string
+  detail: string
+}
+
 export interface GameState {
+  runId: string
+  createdAt: string
   day: number
   endDay: number
   debt: number
@@ -87,9 +98,32 @@ export interface GameState {
   market: Record<DrugId, MarketOffer>
   news: NewsItem[]
   newsCursor: number
+  activity: ActivityItem[]
+  activityCursor: number
 }
 
 export interface ScoreTier {
   threshold: number
   message: string
+}
+
+export interface RunSummary {
+  runId: string
+  day: number
+  endDay: number
+  cityId: CityId
+  cityLabel: string
+  cash: number
+  debt: number
+  bankDeposit: number
+  health: number
+  inventoryValue: number
+  stashUsed: number
+  totalSpace: number
+  score: number
+  tierMessage: string
+}
+
+export interface HighScoreEntry extends RunSummary {
+  recordedAt: string
 }

@@ -14,6 +14,8 @@ export const GAME_CONFIG = {
   dailyInterestRate: 1.1,
   marketEventChance: 0.05,
   newsLimit: 10,
+  activityLimit: 16,
+  maxDebt: 20000,
 } as const
 
 export const DRUGS: DrugDefinition[] = [

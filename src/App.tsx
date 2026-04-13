@@ -1,35 +1,104 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
 import { CITIES, DRUGS } from './game/content'
 import { MapScene } from './components/MapScene'
 import {
+  borrowMoney,
+  buildRunSummary,
   buyDrug,
   createNewGame,
+  depositCash,
   getCurrentCity,
+  getMaxBorrowAmount,
   getMaxBuyQuantity,
+  getMaxDebtPayment,
+  getMaxDepositAmount,
   getMaxSellQuantity,
+  getMaxWithdrawAmount,
   getNetWorth,
   getUsedSpace,
+  isRunOver,
+  payDebt,
   sellDrug,
   travelToCity,
+  withdrawCash,
 } from './game/core'
-import type { CityId, DrugId, GameState, MarketOffer } from './game/types'
+import {
+  clearSavedGame,
+  loadHighScores,
+  loadSavedGame,
+  recordHighScore,
+  saveGame,
+} from './game/storage'
+import type {
+  CityId,
+  DrugId,
+  GameState,
+  HighScoreEntry,
+  MarketOffer,
+} from './game/types'
+
+type AppScreen = 'menu' | 'run' | 'summary'
+type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'borrow'
 
 const moneyFormatter = new Intl.NumberFormat('en-US')
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+})
 
 function createTradeDrafts() {
   return DRUGS.reduce(
     (drafts, drug) => {
-      drafts[drug.id] = '0'
+      drafts[drug.id] = ''
       return drafts
     },
     {} as Record<DrugId, string>,
   )
 }
 
+function createFinanceDrafts() {
+  return {
+    deposit: '',
+    withdraw: '',
+    payDebt: '',
+    borrow: '',
+  }
+}
+
+function sanitizeNumericInput(value: string) {
+  const digitsOnly = value.replace(/[^\d]/g, '')
+
+  if (digitsOnly === '') {
+    return ''
+  }
+
+  return String(Number.parseInt(digitsOnly, 10))
+}
+
+function parsePositiveInteger(value: string) {
+  if (value.trim() === '') {
+    return null
+  }
+
+  const parsed = Number.parseInt(value, 10)
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null
+  }
+
+  return parsed
+}
+
 function formatMoney(value: number) {
-  return `$${moneyFormatter.format(value)}`
+  const absolute = moneyFormatter.format(Math.abs(value))
+  return value < 0 ? `-$${absolute}` : `$${absolute}`
+}
+
+function formatDate(value: string) {
+  return dateFormatter.format(new Date(value))
 }
 
 function getCityById(cityId: CityId) {
@@ -60,22 +129,415 @@ function heatLabel(cops: number) {
   return 'Red hot'
 }
 
+function actionLimitHint(
+  amount: number | null,
+  maxAmount: number,
+  readyText: string,
+  emptyText: string,
+) {
+  if (maxAmount <= 0) {
+    return {
+      error: false,
+      text: emptyText,
+    }
+  }
+
+  if (amount !== null && amount > maxAmount) {
+    return {
+      error: true,
+      text: `Current max is ${formatMoney(maxAmount)}.`,
+    }
+  }
+
+  return {
+    error: false,
+    text: `${readyText} up to ${formatMoney(maxAmount)}.`,
+  }
+}
+
+function tradeHint(
+  amount: number | null,
+  maxBuy: number,
+  maxSell: number,
+  available: boolean,
+) {
+  if (!available) {
+    return {
+      error: false,
+      text: `Off market here. You can only unload this elsewhere.`,
+    }
+  }
+
+  if (amount !== null && amount > maxBuy && amount > maxSell) {
+    return {
+      error: true,
+      text: `Buy limit ${maxBuy} units. Inventory on hand ${maxSell}.`,
+    }
+  }
+
+  if (amount !== null && amount > maxBuy) {
+    return {
+      error: true,
+      text: `Buy limit ${maxBuy} units at this price.`,
+    }
+  }
+
+  if (amount !== null && amount > maxSell) {
+    return {
+      error: true,
+      text: `You only hold ${maxSell} units right now.`,
+    }
+  }
+
+  return {
+    error: false,
+    text: `Buy up to ${maxBuy}. Sell up to ${maxSell}.`,
+  }
+}
+
 function App() {
-  const [game, setGame] = useState<GameState>(() => createNewGame())
-  const [focusedCityId, setFocusedCityId] = useState<CityId>(
-    game.currentCityId,
+  const [screen, setScreen] = useState<AppScreen>('menu')
+  const [game, setGame] = useState<GameState | null>(null)
+  const [resumeGame, setResumeGame] = useState<GameState | null>(() => loadSavedGame())
+  const [highScores, setHighScores] = useState<HighScoreEntry[]>(() =>
+    loadHighScores(),
   )
+  const [lastSummary, setLastSummary] = useState<HighScoreEntry | null>(null)
+  const [focusedCityId, setFocusedCityId] = useState<CityId>(CITIES[0].id)
   const [tradeDrafts, setTradeDrafts] = useState<Record<DrugId, string>>(
     () => createTradeDrafts(),
   )
+  const [financeDrafts, setFinanceDrafts] = useState(createFinanceDrafts)
+
+  useEffect(() => {
+    if (screen !== 'run' || !game) {
+      return
+    }
+
+    saveGame(game)
+  }, [game, screen])
+
+  function openRun(nextGame: GameState) {
+    setGame(nextGame)
+    setFocusedCityId(nextGame.currentCityId)
+    setTradeDrafts(createTradeDrafts())
+    setFinanceDrafts(createFinanceDrafts())
+    setScreen('run')
+  }
+
+  function startNewRun() {
+    clearSavedGame()
+    setResumeGame(null)
+    openRun(createNewGame())
+  }
+
+  function continueSavedRun() {
+    if (!resumeGame) {
+      return
+    }
+
+    openRun(resumeGame)
+  }
+
+  function saveAndReturnToMenu() {
+    if (game) {
+      saveGame(game)
+      setResumeGame(game)
+    }
+
+    setGame(null)
+    setScreen('menu')
+  }
+
+  function finalizeRun() {
+    if (!game) {
+      return
+    }
+
+    const summary: HighScoreEntry = {
+      ...buildRunSummary(game),
+      recordedAt: new Date().toISOString(),
+    }
+
+    setHighScores(recordHighScore(summary))
+    setLastSummary(summary)
+    clearSavedGame()
+    setResumeGame(null)
+    setGame(null)
+    setTradeDrafts(createTradeDrafts())
+    setFinanceDrafts(createFinanceDrafts())
+    setScreen('summary')
+  }
+
+  function setDraft(drugId: DrugId, nextValue: string) {
+    setTradeDrafts((current) => ({
+      ...current,
+      [drugId]: sanitizeNumericInput(nextValue),
+    }))
+  }
+
+  function setFinanceDraft(field: FinanceDraftKey, nextValue: string) {
+    setFinanceDrafts((current) => ({
+      ...current,
+      [field]: sanitizeNumericInput(nextValue),
+    }))
+  }
+
+  function clearFinanceDraft(field: FinanceDraftKey) {
+    setFinanceDraft(field, '')
+  }
+
+  function fillMaxBuy(drugId: DrugId) {
+    if (!game) {
+      return
+    }
+
+    const maxBuy = getMaxBuyQuantity(game, drugId)
+    setDraft(drugId, maxBuy > 0 ? String(maxBuy) : '')
+  }
+
+  function fillMaxSell(drugId: DrugId) {
+    if (!game) {
+      return
+    }
+
+    const maxSell = getMaxSellQuantity(game, drugId)
+    setDraft(drugId, maxSell > 0 ? String(maxSell) : '')
+  }
+
+  function commitBuy(drugId: DrugId) {
+    const quantity = parsePositiveInteger(tradeDrafts[drugId]) ?? 0
+
+    setGame((current) => (current ? buyDrug(current, drugId, quantity) : current))
+    setDraft(drugId, '')
+  }
+
+  function commitSell(drugId: DrugId) {
+    const quantity = parsePositiveInteger(tradeDrafts[drugId]) ?? 0
+
+    setGame((current) =>
+      current ? sellDrug(current, drugId, quantity) : current,
+    )
+    setDraft(drugId, '')
+  }
+
+  function handleTravel(cityId: CityId) {
+    setFocusedCityId(cityId)
+    setGame((current) =>
+      current ? travelToCity(current, cityId) : current,
+    )
+  }
+
+  function commitFinanceAction(
+    field: FinanceDraftKey,
+    action: (state: GameState, amount: number) => GameState,
+  ) {
+    const amount = parsePositiveInteger(financeDrafts[field]) ?? 0
+
+    setGame((current) => (current ? action(current, amount) : current))
+    clearFinanceDraft(field)
+  }
+
+  const resumeSummary = resumeGame ? buildRunSummary(resumeGame) : null
+  const latestRank = lastSummary
+    ? highScores.findIndex((entry) => entry.runId === lastSummary.runId) + 1
+    : 0
+
+  if (screen === 'menu') {
+    return (
+      <main className="shell shell--centered">
+        <section className="panel launch-screen">
+          <div className="launch-screen__copy">
+            <p className="eyebrow">Default content pack</p>
+            <h1>Local Dope Wars</h1>
+            <p className="hero__lede">
+              The current build still ships with the Gwinnett County layout by
+              default, but Phase 1 now has the structure for persistent runs,
+              cleaner financial play, and proper end-of-run handoff.
+            </p>
+            <div className="hero__ticker">
+              <span>Gwinnett starter pack loaded</span>
+              <span>Thirty-day run format</span>
+              <span>Autosave + high scores enabled</span>
+            </div>
+          </div>
+
+          <div className="launch-screen__card">
+            <p className="meta-label">
+              {resumeSummary ? 'Saved run ready' : 'Fresh run ready'}
+            </p>
+            <h2>
+              {resumeSummary
+                ? `${resumeSummary.cityLabel}, day ${resumeSummary.day}`
+                : 'Thirty nights to build a stack'}
+            </h2>
+            <p className="launch-screen__summary">
+              {resumeSummary
+                ? `Resume with ${formatMoney(resumeSummary.score)} in net worth, ${formatMoney(resumeSummary.cash)} cash, and ${formatMoney(resumeSummary.debt)} debt still hanging over the run.`
+                : 'Open a new Gwinnett run with cash in pocket, debt on your back, and the county map ready to work.'}
+            </p>
+            <div className="launch-screen__actions">
+              {resumeSummary ? (
+                <button className="ghost-button" onClick={continueSavedRun}>
+                  Continue saved run
+                </button>
+              ) : null}
+              <button className="accent-button" onClick={startNewRun}>
+                Start new run
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="launch-grid">
+          <article className="panel launch-card">
+            <div className="panel__header">
+              <div>
+                <p className="eyebrow">Top runs</p>
+                <h2>High scores</h2>
+              </div>
+              <p className="news-panel__summary">
+                Best closed-out runs from this browser.
+              </p>
+            </div>
+
+            {highScores.length > 0 ? (
+              <ol className="scoreboard">
+                {highScores.map((entry, index) => (
+                  <li key={`${entry.runId}-${entry.recordedAt}`} className="scoreboard__item">
+                    <div>
+                      <p className="scoreboard__rank">#{index + 1}</p>
+                      <p className="scoreboard__title">
+                        {entry.cityLabel} · Day {entry.day}
+                      </p>
+                      <p className="scoreboard__detail">{entry.tierMessage}</p>
+                    </div>
+                    <div className="scoreboard__score">
+                      <strong>{formatMoney(entry.score)}</strong>
+                      <span>{formatDate(entry.recordedAt)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="empty-state">
+                No finished runs recorded yet. Close one out to seed the board.
+              </p>
+            )}
+          </article>
+
+          <article className="panel launch-card">
+            <div className="panel__header">
+              <div>
+                <p className="eyebrow">Phase 1 slice</p>
+                <h2>What changed</h2>
+              </div>
+            </div>
+            <ul className="feature-list">
+              <li>Runs now autosave and can be resumed from the launch screen.</li>
+              <li>Banking, withdrawals, debt payoff, and borrowing are live.</li>
+              <li>The run can be formally closed with a score summary and leaderboard entry.</li>
+              <li>A dedicated activity ledger now tracks the moves that matter.</li>
+            </ul>
+          </article>
+        </section>
+      </main>
+    )
+  }
+
+  if (screen === 'summary' && lastSummary) {
+    return (
+      <main className="shell shell--centered">
+        <section className="panel summary-screen">
+          <p className="eyebrow">Run closed</p>
+          <h1>{formatMoney(lastSummary.score)}</h1>
+          <p className="summary-screen__lede">{lastSummary.tierMessage}</p>
+          <div className="summary-screen__chips">
+            <span>{lastSummary.cityLabel}</span>
+            <span>
+              Day {lastSummary.day} / {lastSummary.endDay}
+            </span>
+            <span>{latestRank > 0 ? `Leaderboard rank #${latestRank}` : 'Run logged'}</span>
+          </div>
+
+          <div className="summary-screen__stats">
+            <article className="summary-stat">
+              <p className="meta-label">Cash</p>
+              <p>{formatMoney(lastSummary.cash)}</p>
+            </article>
+            <article className="summary-stat">
+              <p className="meta-label">Bank</p>
+              <p>{formatMoney(lastSummary.bankDeposit)}</p>
+            </article>
+            <article className="summary-stat">
+              <p className="meta-label">Inventory value</p>
+              <p>{formatMoney(lastSummary.inventoryValue)}</p>
+            </article>
+            <article className="summary-stat">
+              <p className="meta-label">Debt</p>
+              <p>{formatMoney(lastSummary.debt)}</p>
+            </article>
+          </div>
+
+          <div className="summary-screen__actions">
+            <button className="ghost-button" onClick={() => setScreen('menu')}>
+              Back to launch board
+            </button>
+            <button className="accent-button" onClick={startNewRun}>
+              Start another run
+            </button>
+          </div>
+        </section>
+
+        <section className="panel launch-card">
+          <div className="panel__header">
+            <div>
+              <p className="eyebrow">Top runs</p>
+              <h2>Current leaderboard</h2>
+            </div>
+          </div>
+          <ol className="scoreboard">
+            {highScores.map((entry, index) => (
+              <li key={`${entry.runId}-${entry.recordedAt}`} className="scoreboard__item">
+                <div>
+                  <p className="scoreboard__rank">#{index + 1}</p>
+                  <p className="scoreboard__title">
+                    {entry.cityLabel} · Day {entry.day}
+                  </p>
+                  <p className="scoreboard__detail">{entry.tierMessage}</p>
+                </div>
+                <div className="scoreboard__score">
+                  <strong>{formatMoney(entry.score)}</strong>
+                  <span>{formatDate(entry.recordedAt)}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </main>
+    )
+  }
+
+  if (!game) {
+    return null
+  }
 
   const currentCity = getCurrentCity(game)
   const focusedCity = getCityById(focusedCityId)
   const usedSpace = getUsedSpace(game)
   const runValue = getNetWorth(game)
+  const runClosed = isRunOver(game)
   const liveOffers = DRUGS.filter((drug) => game.market[drug.id].available)
   const daysRemaining = Math.max(game.endDay - game.day, 0)
   const dayProgress = Math.min((game.day / game.endDay) * 100, 100)
+  const maxDeposit = getMaxDepositAmount(game)
+  const maxWithdraw = getMaxWithdrawAmount(game)
+  const maxDebtPayment = getMaxDebtPayment(game)
+  const maxBorrow = getMaxBorrowAmount(game)
+  const depositAmount = parsePositiveInteger(financeDrafts.deposit)
+  const withdrawAmount = parsePositiveInteger(financeDrafts.withdraw)
+  const debtPaymentAmount = parsePositiveInteger(financeDrafts.payDebt)
+  const borrowAmount = parsePositiveInteger(financeDrafts.borrow)
   const cheapestOffer =
     liveOffers.length > 0
       ? liveOffers.reduce((best, candidate) =>
@@ -119,67 +581,41 @@ function App() {
   const featuredModifierDrug =
     liveOffers.find((drug) => game.market[drug.id].modifier !== 'standard') ??
     cheapestOffer
-
-  function resetGame() {
-    const freshGame = createNewGame()
-
-    setGame(freshGame)
-    setFocusedCityId(freshGame.currentCityId)
-    setTradeDrafts(createTradeDrafts())
-  }
-
-  function setDraft(drugId: DrugId, nextValue: string) {
-    setTradeDrafts((current) => ({
-      ...current,
-      [drugId]: nextValue,
-    }))
-  }
-
-  function getDraftQuantity(drugId: DrugId) {
-    const parsed = Number.parseInt(tradeDrafts[drugId], 10)
-
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      return 0
-    }
-
-    return parsed
-  }
-
-  function fillMaxBuy(drugId: DrugId) {
-    setDraft(drugId, String(getMaxBuyQuantity(game, drugId)))
-  }
-
-  function fillMaxSell(drugId: DrugId) {
-    setDraft(drugId, String(getMaxSellQuantity(game, drugId)))
-  }
-
-  function commitBuy(drugId: DrugId) {
-    const quantity = getDraftQuantity(drugId)
-    setGame((current) => buyDrug(current, drugId, quantity))
-    setDraft(drugId, '0')
-  }
-
-  function commitSell(drugId: DrugId) {
-    const quantity = getDraftQuantity(drugId)
-    setGame((current) => sellDrug(current, drugId, quantity))
-    setDraft(drugId, '0')
-  }
-
-  function handleTravel(cityId: CityId) {
-    setFocusedCityId(cityId)
-    setGame((current) => travelToCity(current, cityId))
-  }
+  const depositHint = actionLimitHint(
+    depositAmount,
+    maxDeposit,
+    'Move',
+    'No cash available to stash right now.',
+  )
+  const withdrawHint = actionLimitHint(
+    withdrawAmount,
+    maxWithdraw,
+    'Pull',
+    'No bank reserve available to withdraw.',
+  )
+  const payDebtHint = actionLimitHint(
+    debtPaymentAmount,
+    maxDebtPayment,
+    'Pay down',
+    game.debt <= 0 ? 'Debt is cleared.' : 'No cash available to pay debt.',
+  )
+  const borrowHint = actionLimitHint(
+    borrowAmount,
+    maxBorrow,
+    'Borrow',
+    'Loan ceiling already reached for this run.',
+  )
 
   return (
     <main className="shell">
       <header className="panel hero">
         <div className="hero__copy">
           <p className="eyebrow">Operational dashboard</p>
-          <h1>Gwinnett County Dope Wars</h1>
+          <h1>Local Dope Wars</h1>
           <p className="hero__lede">
-            The rebuild now has a real visual lane: a surveillance-heavy map,
-            a warmer Southern noir palette, and a cleaner command deck for
-            running the Lawrenceville hustle.
+            The Gwinnett starter map is still the active default pack, but the
+            run now carries proper persistence, a working bank layer, and a
+            clean way to close the books when the thirty-day clock runs out.
           </p>
           <div className="hero__ticker">
             <span>{currentCity.district}</span>
@@ -214,21 +650,52 @@ function App() {
               />
             </div>
             <p className="progress-cluster__note">
-              {daysRemaining === 0
-                ? 'The run is over. Start fresh to keep building.'
-                : `${daysRemaining} nights remain before the books close.`}
+              {runClosed
+                ? 'Final day reached. You can still settle inventory and finances before closing the run.'
+                : `${daysRemaining} nights remain before the books close. This run autosaves after each move.`}
             </p>
           </div>
-          <button className="hero__reset" onClick={resetGame}>
-            Start fresh
-          </button>
+          <div className="hero__actions">
+            <button className="ghost-button" onClick={saveAndReturnToMenu}>
+              Save and exit
+            </button>
+            <button className="hero__reset" onClick={startNewRun}>
+              New run
+            </button>
+          </div>
         </div>
       </header>
+
+      {runClosed ? (
+        <section className="panel run-status">
+          <div>
+            <p className="eyebrow">Run complete</p>
+            <h2>Close the books when you are ready</h2>
+            <p className="run-status__copy">
+              Travel is locked now, but you can still liquidate the stash, work
+              the bank, and pay debt before filing the final score.
+            </p>
+          </div>
+          <div className="run-status__actions">
+            <div>
+              <p className="meta-label">Current score preview</p>
+              <p className="run-status__value">{formatMoney(runValue)}</p>
+            </div>
+            <button className="accent-button" onClick={finalizeRun}>
+              Finalize run
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <section className="stats-grid">
         <article className="panel stat-card">
           <p className="meta-label">Cash on hand</p>
           <p className="stat-card__value">{formatMoney(game.cash)}</p>
+        </article>
+        <article className="panel stat-card">
+          <p className="meta-label">Bank reserve</p>
+          <p className="stat-card__value">{formatMoney(game.bankDeposit)}</p>
         </article>
         <article className="panel stat-card">
           <p className="meta-label">Debt pressure</p>
@@ -302,6 +769,195 @@ function App() {
         </article>
       </section>
 
+      <section className="ops-grid">
+        <article className="panel finance-panel">
+          <div className="panel__header">
+            <div>
+              <p className="eyebrow">Finance desk</p>
+              <h2>Bank and debt</h2>
+            </div>
+            <p className="news-panel__summary">
+              Move cash, protect winnings, and decide how hard to lean on the
+              loan ceiling.
+            </p>
+          </div>
+
+          <div className="finance-panel__summary">
+            <div className="finance-summary-card">
+              <p className="meta-label">Bank reserve</p>
+              <p>{formatMoney(game.bankDeposit)}</p>
+            </div>
+            <div className="finance-summary-card">
+              <p className="meta-label">Outstanding debt</p>
+              <p>{formatMoney(game.debt)}</p>
+            </div>
+            <div className="finance-summary-card">
+              <p className="meta-label">Credit remaining</p>
+              <p>{formatMoney(maxBorrow)}</p>
+            </div>
+          </div>
+
+          <div className="finance-panel__grid">
+            <label className="finance-control">
+              <span>Deposit to bank</span>
+              <div className="finance-control__row">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={financeDrafts.deposit}
+                  onChange={(event) =>
+                    setFinanceDraft('deposit', event.target.value)
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  disabled={
+                    depositAmount === null ||
+                    maxDeposit <= 0 ||
+                    depositAmount > maxDeposit
+                  }
+                  onClick={() => commitFinanceAction('deposit', depositCash)}
+                >
+                  Deposit
+                </button>
+              </div>
+              <p
+                className={`finance-control__hint${
+                  depositHint.error ? ' finance-control__hint--error' : ''
+                }`}
+              >
+                {depositHint.text}
+              </p>
+            </label>
+
+            <label className="finance-control">
+              <span>Withdraw from bank</span>
+              <div className="finance-control__row">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={financeDrafts.withdraw}
+                  onChange={(event) =>
+                    setFinanceDraft('withdraw', event.target.value)
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  disabled={
+                    withdrawAmount === null ||
+                    maxWithdraw <= 0 ||
+                    withdrawAmount > maxWithdraw
+                  }
+                  onClick={() =>
+                    commitFinanceAction('withdraw', withdrawCash)
+                  }
+                >
+                  Withdraw
+                </button>
+              </div>
+              <p
+                className={`finance-control__hint${
+                  withdrawHint.error ? ' finance-control__hint--error' : ''
+                }`}
+              >
+                {withdrawHint.text}
+              </p>
+            </label>
+
+            <label className="finance-control">
+              <span>Pay debt</span>
+              <div className="finance-control__row">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={financeDrafts.payDebt}
+                  onChange={(event) =>
+                    setFinanceDraft('payDebt', event.target.value)
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  disabled={
+                    debtPaymentAmount === null ||
+                    maxDebtPayment <= 0 ||
+                    debtPaymentAmount > maxDebtPayment
+                  }
+                  onClick={() => commitFinanceAction('payDebt', payDebt)}
+                >
+                  Pay
+                </button>
+              </div>
+              <p
+                className={`finance-control__hint${
+                  payDebtHint.error ? ' finance-control__hint--error' : ''
+                }`}
+              >
+                {payDebtHint.text}
+              </p>
+            </label>
+
+            <label className="finance-control">
+              <span>Borrow more cash</span>
+              <div className="finance-control__row">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={financeDrafts.borrow}
+                  onChange={(event) =>
+                    setFinanceDraft('borrow', event.target.value)
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  disabled={
+                    borrowAmount === null ||
+                    maxBorrow <= 0 ||
+                    borrowAmount > maxBorrow
+                  }
+                  onClick={() => commitFinanceAction('borrow', borrowMoney)}
+                >
+                  Borrow
+                </button>
+              </div>
+              <p
+                className={`finance-control__hint${
+                  borrowHint.error ? ' finance-control__hint--error' : ''
+                }`}
+              >
+                {borrowHint.text}
+              </p>
+            </label>
+          </div>
+        </article>
+
+        <aside className="panel activity-panel">
+          <div className="panel__header">
+            <div>
+              <p className="eyebrow">Ledger</p>
+              <h2>Activity log</h2>
+            </div>
+            <p className="news-panel__summary">
+              Recent trades, travel, and finance actions for this run.
+            </p>
+          </div>
+          <ol className="activity-list">
+            {game.activity.map((item) => (
+              <li
+                key={item.id}
+                className={`activity-item activity-item--${item.kind}`}
+              >
+                <div className="activity-item__meta">
+                  <span>Day {item.day}</span>
+                  <span>{item.kind}</span>
+                </div>
+                <p className="activity-item__title">{item.title}</p>
+                <p className="activity-item__detail">{item.detail}</p>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </section>
+
       <section className="overview-grid">
         <article className="panel city-panel">
           <div className="panel__header">
@@ -325,7 +981,7 @@ function App() {
               cities={CITIES}
               currentCityId={game.currentCityId}
               focusedCityId={focusedCityId}
-              disableTravel={game.day >= game.endDay}
+              disableTravel={runClosed}
               onFocusCity={setFocusedCityId}
               onTravelCity={handleTravel}
             />
@@ -352,20 +1008,22 @@ function App() {
                   <dd>
                     {focusedCity.id === game.currentCityId
                       ? 'Current territory'
-                      : 'Available to travel'}
+                      : runClosed
+                        ? 'Travel locked'
+                        : 'Available to travel'}
                   </dd>
                 </div>
               </dl>
               <button
                 className="accent-button city-brief__action"
-                disabled={
-                  focusedCity.id === game.currentCityId || game.day >= game.endDay
-                }
+                disabled={focusedCity.id === game.currentCityId || runClosed}
                 onClick={() => handleTravel(focusedCity.id)}
               >
                 {focusedCity.id === game.currentCityId
                   ? 'Current territory'
-                  : `Travel to ${focusedCity.label}`}
+                  : runClosed
+                    ? 'Travel locked'
+                    : `Travel to ${focusedCity.label}`}
               </button>
             </div>
           </div>
@@ -378,7 +1036,7 @@ function App() {
               <h2>Signal feed</h2>
             </div>
             <p className="news-panel__summary">
-              Live reports update when you travel or work the market.
+              Market headlines, travel signals, and warnings from the run.
             </p>
           </div>
           <ol className="news-list">
@@ -392,17 +1050,16 @@ function App() {
       </section>
 
       <section className="panel market-panel">
-          <div className="panel__header market-panel__header">
-            <div>
-              <p className="eyebrow">Trading floor</p>
-              <h2>Market board</h2>
-            </div>
-            <p className="market-panel__note">
-              The board now has a stronger visual system, but it still runs on
-              pure game-core functions, so we can keep layering in graphics
-              without destabilizing gameplay.
-            </p>
+        <div className="panel__header market-panel__header">
+          <div>
+            <p className="eyebrow">Trading floor</p>
+            <h2>Market board</h2>
           </div>
+          <p className="market-panel__note">
+            Trading still runs on the pure game core, but now the board gives
+            clearer input limits so you can see edge cases before a move fires.
+          </p>
+        </div>
 
         <div className="offer-grid">
           {DRUGS.map((drug) => {
@@ -410,6 +1067,16 @@ function App() {
             const inventory = game.inventory[drug.id]
             const maxBuy = getMaxBuyQuantity(game, drug.id)
             const maxSell = getMaxSellQuantity(game, drug.id)
+            const draftQuantity = parsePositiveInteger(tradeDrafts[drug.id])
+            const hint = tradeHint(draftQuantity, maxBuy, maxSell, offer.available)
+            const buyDisabled =
+              !offer.available ||
+              draftQuantity === null ||
+              draftQuantity > maxBuy
+            const sellDisabled =
+              maxSell === 0 ||
+              draftQuantity === null ||
+              draftQuantity > maxSell
 
             return (
               <article
@@ -451,12 +1118,20 @@ function App() {
                 <label className="trade-field">
                   <span>Quantity</span>
                   <input
-                    type="number"
-                    min="0"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    type="text"
                     value={tradeDrafts[drug.id]}
                     onChange={(event) => setDraft(drug.id, event.target.value)}
                   />
                 </label>
+                <p
+                  className={`offer-card__hint${
+                    hint.error ? ' offer-card__hint--error' : ''
+                  }`}
+                >
+                  {hint.text}
+                </p>
 
                 <div className="offer-card__actions">
                   <button
@@ -468,7 +1143,7 @@ function App() {
                   </button>
                   <button
                     className="accent-button"
-                    disabled={!offer.available}
+                    disabled={buyDisabled}
                     onClick={() => commitBuy(drug.id)}
                   >
                     Buy
@@ -482,7 +1157,7 @@ function App() {
                   </button>
                   <button
                     className="accent-button accent-button--secondary"
-                    disabled={maxSell === 0}
+                    disabled={sellDisabled}
                     onClick={() => commitSell(drug.id)}
                   >
                     Sell
