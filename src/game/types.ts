@@ -141,6 +141,9 @@ export interface ContentPackDefinition {
   id: ContentPackId
   label: string
   shortLabel: string
+  description: string
+  accent: string
+  startingCityId?: CityId
   map: MapSceneDefinition
   cities: CityDefinition[]
   drugs: DrugDefinition[]

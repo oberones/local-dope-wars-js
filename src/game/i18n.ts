@@ -91,9 +91,9 @@ export const EN_US_LOCALE = {
   formatMarketModifier,
   formatHeatLabel,
   menu: {
-    eyebrow: 'Default content pack',
-    heroLede: (contentLabel: string) =>
-      `The current build still ships with the ${contentLabel} layout by default, but the latest roadmap slice now routes UI and gameplay copy through a typed locale layer.`,
+    eyebrow: 'Starter content pack',
+    heroLede: (contentLabel: string, description: string) =>
+      `${contentLabel} is armed for the next new run. ${description}`,
     starterPackLoaded: (shortLabel: string) => `${shortLabel} starter pack loaded`,
     runFormat: 'Thirty-day run format',
     persistenceEnabled: 'Autosave + high scores enabled',
@@ -106,8 +106,23 @@ export const EN_US_LOCALE = {
       `Resume with ${formatMoney(score)} in net worth, ${formatMoney(cash)} cash, and ${formatMoney(debt)} debt still hanging over the run.`,
     freshRunSummary: (shortLabel: string) =>
       `Open a new ${shortLabel} run with cash in pocket, debt on your back, and the county map ready to work.`,
+    newRunArmedNote: (contentLabel: string) =>
+      `New runs are currently armed for ${contentLabel}.`,
     continueSavedRun: 'Continue saved run',
     startNewRun: 'Start new run',
+    packSelectorEyebrow: 'Pack selector',
+    packSelectorHeading: 'Choose next run map',
+    packSelectorSummary:
+      'New runs use the selected pack. Saved runs keep their original setting.',
+    builtInDefault: 'Built-in default',
+    alternateBundle: 'Alternate bundle',
+    selectedForNewRuns: 'Selected for new runs',
+    useThisPack: 'Use this pack',
+    locationsCount: (count: number) =>
+      `${count} location${count === 1 ? '' : 's'}`,
+    startsIn: (cityLabel: string) => `Starts in ${cityLabel}`,
+    packLaunchNote: (shortLabel: string, cityLabel: string) =>
+      `${shortLabel} opens in ${cityLabel}.`,
     topRunsEyebrow: 'Top runs',
     highScoresHeading: 'High scores',
     highScoresSummary: 'Best closed-out runs from this browser.',
@@ -118,7 +133,7 @@ export const EN_US_LOCALE = {
     currentBuildItems: [
       'Runs autosave and can be resumed from the launch screen.',
       'Banking, withdrawals, debt payoff, and borrowing are live.',
-      'The default Gwinnett pack now runs through typed content-pack data.',
+      'Players can now choose between bundled starter location packs for new runs.',
       'The current UI and gameplay copy now route through a typed English locale.',
     ],
   },

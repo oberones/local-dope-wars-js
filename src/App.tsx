@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
-import { DEFAULT_CONTENT_PACK, getContentPack } from './game/content'
+import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, getContentPack } from './game/content'
 import { DEFAULT_LOCALE } from './game/i18n'
 import { MapScene } from './components/MapScene'
 import {
@@ -28,12 +28,16 @@ import {
 import {
   clearSavedGame,
   loadHighScores,
+  loadSelectedContentPackId,
   loadSavedGame,
   recordHighScore,
   saveGame,
+  saveSelectedContentPackId,
 } from './game/storage'
 import type {
   CityId,
+  ContentPackDefinition,
+  ContentPackId,
   DrugId,
   GameState,
   HighScoreEntry,
@@ -88,6 +92,15 @@ function parsePositiveInteger(value: string) {
 
 function getCityById(cityId: CityId, cityIds: typeof DEFAULT_CONTENT_PACK.cities) {
   return cityIds.find((city) => city.id === cityId) ?? cityIds[0]
+}
+
+function getStartingCity(content: ContentPackDefinition) {
+  const resolvedStartingCityId =
+    content.startingCityId && content.cities.some((city) => city.id === content.startingCityId)
+      ? content.startingCityId
+      : content.cities[0]?.id
+
+  return content.cities.find((city) => city.id === resolvedStartingCityId) ?? content.cities[0]
 }
 
 function actionLimitHint(
@@ -164,6 +177,9 @@ function App() {
     loadHighScores(),
   )
   const [lastSummary, setLastSummary] = useState<HighScoreEntry | null>(null)
+  const [selectedContentPackId, setSelectedContentPackId] = useState<ContentPackId>(
+    () => loadSelectedContentPackId() ?? DEFAULT_CONTENT_PACK.id,
+  )
   const [focusedCityId, setFocusedCityId] = useState<CityId>(
     DEFAULT_CONTENT_PACK.cities[0]?.id ?? '',
   )
@@ -180,10 +196,15 @@ function App() {
     saveGame(game)
   }, [game, screen])
 
+  useEffect(() => {
+    saveSelectedContentPackId(selectedContentPackId)
+  }, [selectedContentPackId])
+
   function openRun(nextGame: GameState) {
     const nextContent = getContentPack(nextGame.contentPackId)
 
     setGame(nextGame)
+    setSelectedContentPackId(nextGame.contentPackId)
     setFocusedCityId(nextGame.currentCityId)
     setTradeDrafts(createTradeDrafts(nextContent.drugs.map((drug) => drug.id)))
     setFinanceDrafts(createFinanceDrafts())
@@ -193,7 +214,7 @@ function App() {
   function startNewRun() {
     clearSavedGame()
     setResumeGame(null)
-    openRun(createNewGame())
+    openRun(createNewGame(selectedContentPackId))
   }
 
   function continueSavedRun() {
@@ -229,7 +250,11 @@ function App() {
     clearSavedGame()
     setResumeGame(null)
     setGame(null)
-    setTradeDrafts(createTradeDrafts())
+    setTradeDrafts(
+      createTradeDrafts(
+        getContentPack(selectedContentPackId).drugs.map((drug) => drug.id),
+      ),
+    )
     setFinanceDrafts(createFinanceDrafts())
     setScreen('summary')
   }
@@ -303,9 +328,11 @@ function App() {
     clearFinanceDraft(field)
   }
 
+  const selectedContent = getContentPack(selectedContentPackId)
+  const selectedStartCity = getStartingCity(selectedContent)
   const resumeContent = resumeGame
     ? getContentPack(resumeGame.contentPackId)
-    : DEFAULT_CONTENT_PACK
+    : selectedContent
   const resumeSummary = resumeGame ? buildRunSummary(resumeGame) : null
   const latestRank = lastSummary
     ? highScores.findIndex((entry) => entry.runId === lastSummary.runId) + 1
@@ -319,10 +346,13 @@ function App() {
             <p className="eyebrow">{locale.menu.eyebrow}</p>
             <h1>{locale.appTitle}</h1>
             <p className="hero__lede">
-              {locale.menu.heroLede(resumeContent.label)}
+              {locale.menu.heroLede(
+                selectedContent.label,
+                selectedContent.description,
+              )}
             </p>
             <div className="hero__ticker">
-              <span>{locale.menu.starterPackLoaded(resumeContent.shortLabel)}</span>
+              <span>{locale.menu.starterPackLoaded(selectedContent.shortLabel)}</span>
               <span>{locale.menu.runFormat}</span>
               <span>{locale.menu.persistenceEnabled}</span>
             </div>
@@ -359,10 +389,80 @@ function App() {
                 {locale.menu.startNewRun}
               </button>
             </div>
+            <p className="launch-screen__note">
+              {locale.menu.newRunArmedNote(selectedContent.label)}
+            </p>
           </div>
         </section>
 
         <section className="launch-grid">
+          <article className="panel launch-card">
+            <div className="panel__header">
+              <div>
+                <p className="eyebrow">{locale.menu.packSelectorEyebrow}</p>
+                <h2>{locale.menu.packSelectorHeading}</h2>
+              </div>
+              <p className="news-panel__summary">
+                {locale.menu.packSelectorSummary}
+              </p>
+            </div>
+
+            <div className="pack-list">
+              {CONTENT_PACKS.map((pack) => {
+                const startCity = getStartingCity(pack)
+                const isSelected = pack.id === selectedContentPackId
+
+                return (
+                  <button
+                    key={pack.id}
+                    type="button"
+                    className={`pack-card${isSelected ? ' pack-card--selected' : ''}`}
+                    style={
+                      {
+                        '--pack-accent': pack.accent,
+                        '--pack-glow': `${pack.accent}33`,
+                      } as CSSProperties
+                    }
+                    onClick={() => setSelectedContentPackId(pack.id)}
+                  >
+                    <div className="pack-card__top">
+                      <div>
+                        <p className="pack-card__eyebrow">
+                          {pack.id === DEFAULT_CONTENT_PACK.id
+                            ? locale.menu.builtInDefault
+                            : locale.menu.alternateBundle}
+                        </p>
+                        <h3>{pack.label}</h3>
+                      </div>
+                      <span className="pack-card__status">
+                        {isSelected
+                          ? locale.menu.selectedForNewRuns
+                          : locale.menu.useThisPack}
+                      </span>
+                    </div>
+                    <p className="pack-card__description">{pack.description}</p>
+                    <div className="pack-card__chips">
+                      <span>{locale.menu.locationsCount(pack.cities.length)}</span>
+                      {startCity ? (
+                        <span>{locale.menu.startsIn(startCity.label)}</span>
+                      ) : null}
+                      <span>{pack.map.title}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="launch-card__footer">
+              {selectedStartCity
+                ? locale.menu.packLaunchNote(
+                    selectedContent.shortLabel,
+                    selectedStartCity.label,
+                  )
+                : selectedContent.description}
+            </p>
+          </article>
+
           <article className="panel launch-card">
             <div className="panel__header">
               <div>

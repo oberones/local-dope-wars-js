@@ -201,10 +201,14 @@ function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) 
   return { market, bulletins }
 }
 
-export function createNewGame(contentPackId = GAME_CONFIG.defaultContentPackId): GameState {
+export function createNewGame(
+  contentPackId: ContentPackId = GAME_CONFIG.defaultContentPackId,
+): GameState {
   const content = getContentPack(contentPackId)
   const startingCityId =
-    content.citiesById[GAME_CONFIG.startingCityId] ?
+    content.startingCityId && content.citiesById[content.startingCityId] ?
+      content.startingCityId
+    : content.citiesById[GAME_CONFIG.startingCityId] ?
       GAME_CONFIG.startingCityId
     : content.cities[0]?.id
 

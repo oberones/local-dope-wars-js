@@ -21,6 +21,14 @@ export const GAME_CONFIG = {
   maxDebt: 20000,
 } as const
 
+function cloneDrugDefinitions(drugs: DrugDefinition[]) {
+  return drugs.map((drug) => ({
+    ...drug,
+    cheap: drug.cheap ? { ...drug.cheap } : undefined,
+    expensive: drug.expensive ? { ...drug.expensive } : undefined,
+  }))
+}
+
 const GWINNETT_DRUGS: DrugDefinition[] = [
   {
     id: 'acid',
@@ -148,6 +156,30 @@ const GWINNETT_DRUGS: DrugDefinition[] = [
   },
 ]
 
+const ATLANTA_DRUGS: DrugDefinition[] = cloneDrugDefinitions(GWINNETT_DRUGS).map((drug) => {
+  if (drug.id === 'wax' && drug.cheap) {
+    return {
+      ...drug,
+      cheap: {
+        ...drug.cheap,
+        headline: 'Wax carts are flooded across the eastside tonight.',
+      },
+    }
+  }
+
+  if (drug.id === 'marijuana' && drug.cheap) {
+    return {
+      ...drug,
+      cheap: {
+        ...drug.cheap,
+        headline: 'Cheap weed is everywhere tonight. Peak harvest energy.',
+      },
+    }
+  }
+
+  return drug
+})
+
 const GWINNETT_CITIES: CityDefinition[] = [
   {
     id: 'duluth',
@@ -263,6 +295,121 @@ const GWINNETT_CITIES: CityDefinition[] = [
   },
 ]
 
+const ATLANTA_CITIES: CityDefinition[] = [
+  {
+    id: 'midtown',
+    label: 'Midtown',
+    district: 'Peachtree spine',
+    landmark: 'Tower lobbies and late hotel elevators',
+    atmosphere:
+      'Bright glass, expensive rideshares, and enough turnover to hide a quick exchange.',
+    signature: 'Strong central hub when you need reach in every direction.',
+    cops: 28,
+    minDrugs: 5,
+    maxDrugs: 10,
+    map: { x: 42, y: 19 },
+    tagline: 'Hotel traffic and tower money keep the board moving.',
+  },
+  {
+    id: 'buckhead',
+    label: 'Buckhead',
+    district: 'North towers',
+    landmark: 'Clubs, parking decks, and polished exits',
+    atmosphere:
+      'Money moves fast here, but every mistake gets lit up under a cleaner spotlight.',
+    signature: 'Big upside with tighter patrol pressure than it first appears.',
+    cops: 46,
+    minDrugs: 4,
+    maxDrugs: 8,
+    map: { x: 60, y: 14 },
+    tagline: 'Bottle-service money and expensive mistakes travel together.',
+  },
+  {
+    id: 'little-five-points',
+    label: 'Little Five',
+    district: 'Eastside strip',
+    landmark: 'Dive bars, record stores, and sidewalk spillover',
+    atmosphere:
+      'Dense foot traffic, odd hours, and a crowd that rewards staying flexible.',
+    signature: 'Low-to-mid heat volume play with steady overnight movement.',
+    cops: 18,
+    minDrugs: 6,
+    maxDrugs: 10,
+    map: { x: 28, y: 36 },
+    tagline: 'Sidewalk drift and late-night churn open clean small windows.',
+  },
+  {
+    id: 'old-fourth-ward',
+    label: 'Old Fourth Ward',
+    district: 'Beltline core',
+    landmark: 'Trail cut-throughs and warehouse edges',
+    atmosphere:
+      'Always in motion, always visible, and balanced right on the line between opportunity and pressure.',
+    signature: 'The best launch point for working the intown graph.',
+    cops: 34,
+    minDrugs: 6,
+    maxDrugs: 10,
+    map: { x: 45, y: 38 },
+    tagline: 'Constant turnover makes it the engine room of the pack.',
+  },
+  {
+    id: 'decatur',
+    label: 'Decatur',
+    district: 'Square and east rail',
+    landmark: 'Station exits and quiet-money side streets',
+    atmosphere:
+      'Cleaner transfers, calmer blocks, and enough eastside demand to keep margins honest.',
+    signature: 'Reliable for lower-drama repositioning plays.',
+    cops: 22,
+    minDrugs: 6,
+    maxDrugs: 10,
+    map: { x: 72, y: 36 },
+    tagline: 'Rail links and quieter blocks make for steadier flips.',
+  },
+  {
+    id: 'west-end',
+    label: 'West End',
+    district: 'Southwest corridor',
+    landmark: 'Long blocks, stations, and older storefronts',
+    atmosphere:
+      'Wide lanes and older routes leave room to pivot, but nothing stays quiet for long.',
+    signature: 'Good for route changes when the eastside gets too bright.',
+    cops: 38,
+    minDrugs: 5,
+    maxDrugs: 9,
+    map: { x: 20, y: 61 },
+    tagline: 'Room to move, but never enough room to get lazy.',
+  },
+  {
+    id: 'summerhill',
+    label: 'Summerhill',
+    district: 'Stadium belt',
+    landmark: 'Game-day spillover and patrol-heavy blocks',
+    atmosphere:
+      'Pressure rises fast here, especially once crowds thin out and the patrol pattern tightens.',
+    signature: 'Sharp payouts if you can tolerate a louder board.',
+    cops: 62,
+    minDrugs: 4,
+    maxDrugs: 8,
+    map: { x: 45, y: 63 },
+    tagline: 'Crowd energy turns into patrol pressure after midnight.',
+  },
+  {
+    id: 'east-atlanta',
+    label: 'East Atlanta',
+    district: 'Village lanes',
+    landmark: 'Bar edges, back lots, and neighborhood cut-throughs',
+    atmosphere:
+      'Loose enough to work, tense enough to punish bad timing once the late crowd peaks.',
+    signature: 'Volatile eastside node with strong upside on the right night.',
+    cops: 54,
+    minDrugs: 4,
+    maxDrugs: 9,
+    map: { x: 60, y: 58 },
+    tagline: 'Back-lot movement and bar-close spikes make it swingy.',
+  },
+]
+
 const GWINNETT_SCORE_TIERS: ScoreTier[] = [
   {
     threshold: 100000000,
@@ -326,10 +473,77 @@ const GWINNETT_SCORE_TIERS: ScoreTier[] = [
   },
 ]
 
+const ATLANTA_SCORE_TIERS: ScoreTier[] = [
+  {
+    threshold: 100000000,
+    message: 'Come on, you definitely cheated to get there.',
+  },
+  {
+    threshold: 1000000,
+    message: 'You are running Atlanta better than anyone in the universe.',
+  },
+  {
+    threshold: 400000,
+    message: 'That is more money than this city can comfortably handle.',
+  },
+  {
+    threshold: 300000,
+    message: 'Perfect.',
+  },
+  {
+    threshold: 200000,
+    message: 'Excellent.',
+  },
+  {
+    threshold: 100000,
+    message: 'Wow.',
+  },
+  {
+    threshold: 50000,
+    message: 'Quite good.',
+  },
+  {
+    threshold: 10000,
+    message: 'Not bad.',
+  },
+  {
+    threshold: 5000,
+    message: 'Almost respectable.',
+  },
+  {
+    threshold: 1000,
+    message: 'Try making some real money next run.',
+  },
+  {
+    threshold: 0,
+    message: 'That was a rough hustle.',
+  },
+  {
+    threshold: -4050,
+    message: 'Why do you even keep trying?',
+  },
+  {
+    threshold: -10000,
+    message: 'This line of work normally makes money.',
+  },
+  {
+    threshold: -99999,
+    message: 'You might be the worst dealer in recorded history.',
+  },
+  {
+    threshold: -100000,
+    message: 'Absolute catastrophe.',
+  },
+]
+
 export const GWINNETT_CONTENT_PACK: ContentPackDefinition = {
   id: 'gwinnett-county',
   label: 'Gwinnett County',
   shortLabel: 'Gwinnett',
+  description:
+    'Suburban Georgia after dark: wider buffers, courthouse gravity, and enough room to turn patience into money.',
+  accent: '#f4c95d',
+  startingCityId: 'lawrenceville',
   map: {
     title: 'Gwinnett network',
     ariaLabel: 'Illustrated Gwinnett County market map',
@@ -396,7 +610,84 @@ export const GWINNETT_CONTENT_PACK: ContentPackDefinition = {
   scoreTiers: GWINNETT_SCORE_TIERS,
 }
 
-export const CONTENT_PACKS: ContentPackDefinition[] = [GWINNETT_CONTENT_PACK]
+export const ATLANTA_INTOWN_CONTENT_PACK: ContentPackDefinition = {
+  id: 'atlanta-intown',
+  label: 'Atlanta Intown',
+  shortLabel: 'Atlanta',
+  description:
+    'Denser neighborhoods, faster heat shifts, and tighter route pressure across Atlanta after midnight.',
+  accent: '#38bdf8',
+  startingCityId: 'old-fourth-ward',
+  map: {
+    title: 'Atlanta intown grid',
+    ariaLabel: 'Illustrated Atlanta intown market map',
+    routes: [
+      ['buckhead', 'midtown'],
+      ['midtown', 'old-fourth-ward'],
+      ['old-fourth-ward', 'little-five-points'],
+      ['little-five-points', 'decatur'],
+      ['old-fourth-ward', 'summerhill'],
+      ['summerhill', 'west-end'],
+      ['summerhill', 'east-atlanta'],
+      ['east-atlanta', 'decatur'],
+      ['midtown', 'west-end'],
+    ],
+    districts: [
+      {
+        id: 'north',
+        label: 'Buckhead / Midtown',
+        subtitle: 'High-rise money',
+        points: '26,14 44,10 66,12 66,26 40,29 25,24',
+        cityIds: ['midtown', 'buckhead'],
+        fill: 'rgba(56, 189, 248, 0.1)',
+      },
+      {
+        id: 'east',
+        label: 'Little Five / Decatur',
+        subtitle: 'Eastside drift',
+        points: '25,24 40,29 78,27 82,43 58,48 24,41',
+        cityIds: ['little-five-points', 'old-fourth-ward', 'decatur'],
+        fill: 'rgba(34, 197, 94, 0.08)',
+      },
+      {
+        id: 'southwest',
+        label: 'West End / Summerhill',
+        subtitle: 'Station and stadium pressure',
+        points: '14,49 36,44 58,48 63,76 20,82 10,66',
+        cityIds: ['west-end', 'summerhill'],
+        fill: 'rgba(249, 115, 22, 0.09)',
+      },
+      {
+        id: 'southeast',
+        label: 'East Atlanta',
+        subtitle: 'Village volatility',
+        points: '58,48 82,43 84,68 65,79 50,71',
+        cityIds: ['east-atlanta'],
+        fill: 'rgba(244, 197, 93, 0.1)',
+      },
+    ],
+    arterials: [
+      'M20 22 C31 21, 42 21, 59 20 C69 20, 76 23, 83 28',
+      'M18 39 C29 39, 39 39, 49 39 C60 39, 70 42, 80 47',
+      'M42 15 C43 26, 44 36, 45 49 C46 59, 47 68, 48 81',
+      'M12 63 C24 58, 36 55, 49 55 C61 55, 72 57, 82 63',
+    ],
+    labels: [
+      { x: 60, y: 15, text: 'North towers' },
+      { x: 69, y: 34, text: 'East rail' },
+      { x: 46, y: 58, text: 'Stadium belt' },
+      { x: 20, y: 70, text: 'Westside route' },
+    ],
+  },
+  cities: ATLANTA_CITIES,
+  drugs: ATLANTA_DRUGS,
+  scoreTiers: ATLANTA_SCORE_TIERS,
+}
+
+export const CONTENT_PACKS: ContentPackDefinition[] = [
+  GWINNETT_CONTENT_PACK,
+  ATLANTA_INTOWN_CONTENT_PACK,
+]
 
 export const CONTENT_PACKS_BY_ID = CONTENT_PACKS.reduce(
   (lookup, pack) => {
