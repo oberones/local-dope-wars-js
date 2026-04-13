@@ -1,6 +1,6 @@
 # ROADMAP.md
 
-This roadmap applies to `/Users/oberon/Projects/coding/javascript/gwinnett-dope-wars/modern`.
+This roadmap applies to `/Users/oberon/Projects/coding/javascript/local-dope-wars`.
 
 ## Current Status
 
@@ -13,11 +13,13 @@ Completed:
 - Dedicated SVG map scene in `src/components/MapScene.tsx`
 - Art direction brief in `docs/art-direction.md`
 - Basic lint/build verification flow
+- The current built-in content pack still defaults to the original Gwinnett County setting
 
 Still missing:
 
 - Save/load and high scores
 - Modern i18n
+- Configurable location/content packs beyond the built-in defaults
 - Deeper game systems
 - Production-ready art assets
 - Automated tests
@@ -27,8 +29,9 @@ Still missing:
 
 1. Finish the game systems before over-investing in presentation polish.
 2. Keep gameplay logic in `src/game/core.ts` and content in `src/game/content.ts`.
-3. Preserve the current map/component boundary while upgrading visuals.
-4. Ship a playable vertical slice before broadening scope too much.
+3. Preserve the current Gwinnett-flavored content as the default starter set, but do not hard-code it so deeply that alternate location packs become painful.
+4. Preserve the current map/component boundary while upgrading visuals.
+5. Ship a playable vertical slice before broadening scope too much.
 
 ## Phase 1: Functional Vertical Slice
 
@@ -69,39 +72,43 @@ Definition of done:
 
 - A run involves meaningful risk management, not just buy/sell optimization
 
-## Phase 3: Localization And Content Layer
+## Phase 3: Localization, Content, And Customization Layer
 
 Goal:
-Replace hard-coded UI text with a maintainable content system and deepen Gwinnett-specific flavor.
+Replace hard-coded UI text with a maintainable content system and turn the current Gwinnett-specific material into the default customizable starter pack.
 
 Tasks:
 
 - Introduce a modern i18n solution
 - Move UI strings and event copy out of components
 - Normalize all player-facing copy into a maintainable structure
-- Expand city descriptions, event flavor, and score messaging
-- Audit all city and item names for tone consistency
-- Add more Gwinnett/Lawrenceville-specific references where appropriate
+- Define a typed configuration/content model for customizable location sets, labels, and related flavor data
+- Ensure map labels, travel graph data, and location copy can be swapped without rewriting gameplay rules
+- Keep the existing Gwinnett/Lawrenceville references as the built-in default content pack
+- Expand default city descriptions, event flavor, and score messaging
+- Audit all bundled city and item names for tone consistency
 
 Definition of done:
 
 - Text is no longer scattered across React components
-- New content can be added without touching gameplay logic
+- The app ships with the current Gwinnett content as its default pack
+- New location/content packs can be added without touching gameplay logic
 
 ## Phase 4: Art And Interface Production
 
 Goal:
-Turn the current strong visual direction into a production-quality interface.
+Turn the current strong visual direction into a production-quality interface that still supports future alternate location packs.
 
 Tasks:
 
-- Replace placeholder geometric map art with custom illustrated county artwork
+- Replace placeholder geometric map art with custom illustrated artwork for the default Gwinnett map
 - Add district landmark illustrations or iconography
 - Replace generic chips and markers with custom iconography
 - Add textured panel treatments and asset-backed visual layers
 - Add more polished transitions for travel, special events, and end-of-run states
 - Introduce drug/item icon systems
 - Add stronger mobile-specific UI refinement where necessary
+- Keep the map/art pipeline modular enough that future location packs can supply their own scene assets
 
 Reference:
 
@@ -165,7 +172,7 @@ Tune the game into something genuinely fun rather than merely functional.
 Tasks:
 
 - Review item price ranges and event frequency
-- Tune city heat and availability profiles
+- Tune default city heat and availability profiles
 - Tune run length and debt growth
 - Review whether the market is too easy or too punishing
 - Add a simple balancing worksheet or content notes for future tuning
@@ -177,9 +184,9 @@ Definition of done:
 ## Near-Term Recommended Order
 
 1. Save/load and endgame flow
-2. Bank/pawn mechanics
-3. Random events and cops/heat gameplay
-4. Modern i18n
+2. Localization/content work for customizable location packs
+3. Bank/pawn mechanics
+4. Random events and cops/heat gameplay
 5. Core tests
 6. Custom map art and iconography
 
@@ -194,6 +201,8 @@ Definition of done:
 ## Working Notes For Future Agents
 
 - Do not treat the legacy app as runtime code.
+- The legacy reference source lives in the sibling folder `../gwinnett-dope-wars/`.
 - Keep new rules out of `App.tsx`.
-- Preserve stable IDs for cities and drugs.
+- Preserve stable IDs for built-in default cities and drugs.
+- Keep the current Gwinnett content as the default pack while designing new content systems to support alternate locations.
 - Run `npm run lint` and `npm run build` before closing out non-trivial work.
