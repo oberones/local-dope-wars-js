@@ -49,6 +49,10 @@ function formatActivityKind(kind: ActivityKind) {
     return 'Trade'
   }
 
+  if (kind === 'encounter') {
+    return 'Encounter'
+  }
+
   return 'Finance'
 }
 
@@ -132,9 +136,9 @@ export const EN_US_LOCALE = {
     currentBuildHeading: 'What is live',
     currentBuildItems: [
       'Runs autosave and can be resumed from the launch screen.',
-      'Banking, withdrawals, debt payoff, and borrowing are live.',
+      'Banking, withdrawals, debt payoff, borrowing, and patch-up recovery are live.',
       'Players can now choose between bundled starter location packs for new runs.',
-      'The current UI and gameplay copy now route through a typed English locale.',
+      'Travel heat now drives encounter risk, stash losses, and cash pressure.',
     ],
   },
   summary: {
@@ -172,6 +176,7 @@ export const EN_US_LOCALE = {
     currentScorePreview: 'Current score preview',
     finalizeRun: 'Finalize run',
     cashOnHand: 'Cash on hand',
+    health: 'Health',
     bankReserve: 'Bank reserve',
     debtPressure: 'Debt pressure',
     stashSpace: 'Stash space',
@@ -195,6 +200,14 @@ export const EN_US_LOCALE = {
     financeHeading: 'Bank and debt',
     financeSummary:
       'Move cash, protect winnings, and decide how hard to lean on the loan ceiling.',
+    streetMedicLabel: 'Street medic',
+    streetMedicButton: 'Patch up',
+    streetMedicReady: (health: number, cost: number) =>
+      `Restore ${health} health for ${formatMoney(cost)}.`,
+    streetMedicNoNeed: 'Health is already topped off.',
+    streetMedicNoCash: 'No cash on hand to patch up right now.',
+    streetMedicTravelLock:
+      'You are too beat up to travel. Patch up before moving again.',
     outstandingDebt: 'Outstanding debt',
     creditRemaining: 'Credit remaining',
     depositLabel: 'Deposit to bank',
@@ -218,6 +231,7 @@ export const EN_US_LOCALE = {
     statusLabel: 'Status',
     currentTerritory: 'Current territory',
     travelLocked: 'Travel locked',
+    tooHurtToTravel: 'Too hurt to travel',
     availableToTravel: 'Available to travel',
     streetChatterEyebrow: 'Street chatter',
     signalFeedHeading: 'Signal feed',
@@ -291,6 +305,29 @@ export const EN_US_LOCALE = {
       `${drugLabel} is dry in ${cityLabel} today.`,
     needMoreStashSpace: 'You need more stash space.',
     notEnoughCash: 'You do not have enough cash for that pickup.',
+    tooHurtToMove:
+      'You are too beat up to travel. Patch up before you move again.',
+    shakedownNews: (amount: number) =>
+      `A roadside shakedown cost you ${formatMoney(amount)} in cash.`,
+    shakedownTitle: 'Roadside shakedown',
+    shakedownDetail: (cityLabel: string, amount: number) =>
+      `Heat on the way into ${cityLabel} forced you to drop ${formatMoney(amount)} to keep moving.`,
+    roughRideNews: (damage: number) =>
+      `A rough stop left you down ${damage} health.`,
+    roughRideTitle: 'Rough stop',
+    roughRideDetail: (cityLabel: string, health: number) =>
+      `Pressure around ${cityLabel} knocked you down to ${health}% health.`,
+    stashSweepNews: (quantity: number, drugLabel: string) =>
+      `A patrol sweep ripped ${quantity} ${drugLabel} out of your stash.`,
+    stashSweepTitle: (quantity: number, drugLabel: string) =>
+      `Lost ${quantity} ${drugLabel}`,
+    stashSweepDetail: (cityLabel: string) =>
+      `A hot approach into ${cityLabel} cost you part of the stash before the market even opened.`,
+    luckyBreakNews: (amount: number) =>
+      `A quiet back-channel handoff put ${formatMoney(amount)} in your pocket.`,
+    luckyBreakTitle: 'Lucky break',
+    luckyBreakDetail: (cityLabel: string, amount: number) =>
+      `A contact near ${cityLabel} handed you a soft ${formatMoney(amount)} score on arrival.`,
     boughtNews: (quantity: number, drugLabel: string, price: number) =>
       `Bought ${quantity} ${drugLabel} at ${formatMoney(price)} each.`,
     boughtTitle: (quantity: number, drugLabel: string) =>
@@ -340,6 +377,13 @@ export const EN_US_LOCALE = {
     borrowedTitle: (amount: number) => `Borrowed ${formatMoney(amount)}`,
     borrowedDetail: (cash: number, debt: number) =>
       `Cash rose to ${formatMoney(cash)} while debt climbed to ${formatMoney(debt)}.`,
+    noRecoveryNeeded: 'You do not need to patch up right now.',
+    noRecoveryCash: 'You do not have the cash to patch yourself up.',
+    recoveredHealthNews: (health: number, cost: number) =>
+      `You patched up ${health} health for ${formatMoney(cost)}.`,
+    recoveredHealthTitle: (health: number) => `Patched up ${health} health`,
+    recoveredHealthDetail: (health: number) =>
+      `Condition improved to ${health}% before the next move.`,
   },
 }
 
