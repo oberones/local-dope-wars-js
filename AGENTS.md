@@ -104,6 +104,12 @@ Before finishing meaningful source changes:
 2. Run `npm run build`.
 3. Report any limitations or skipped verification clearly.
 
+When asked to create a commit:
+
+1. Use Conventional Commits for the subject line, for example `feat: add run persistence`.
+2. Include a short commit body that states what changed.
+3. Include a short validation note in the commit body, such as `Validation: npm run lint && npm run build`.
+
 ## Current State
 
 - The app already has a pure typed game core.
