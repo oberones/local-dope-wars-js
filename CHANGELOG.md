@@ -1,3 +1,9 @@
+## 0.1.3 (2026-04-13)
+
+### Refactor
+
+- add content pack foundation
+
 ## 0.1.2 (2026-04-13)
 
 ### Fix
