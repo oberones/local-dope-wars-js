@@ -30,6 +30,8 @@ This is the modern rebuild of the classic Dope Wars project, now branded as Loca
   Canonical default city, drug, and score content. Keep future customizable content aligned to the same typed shape.
 - `src/game/core.ts`
   Gameplay rules and state transitions. This layer should stay free of React, DOM access, and styling concerns.
+- `src/game/i18n.ts`
+  Typed locale/copy definitions and formatting helpers. Move shared player-facing UI/system copy here instead of scattering literals across components and core logic.
 
 ### UI
 
@@ -116,17 +118,17 @@ When asked to create a commit:
 - The market loop supports travel, market generation, buying, selling, and run-value tracking.
 - The territory board is now a dedicated SVG scene component.
 - The current built-in content still defaults to the Gwinnett County location set.
-- Location customization has not been built yet, so the default map/content is still effectively hard-coded.
-- Text is still hard-coded in the new app and has not yet been moved to a modern i18n layer.
+- A typed content-pack foundation now exists, but there is not yet a player-facing pack picker or alternate bundled location set.
+- A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
 - Save/load, cops, random encounters, weapons, bank depth, and endgame polish are still pending.
 
 ## Good Next Steps
 
-1. Add a typed customization layer for locations/content while keeping the current Gwinnett values as the built-in defaults.
-2. Add modern i18n support.
-3. Add persistent saves and high scores.
-4. Expand `src/game/core.ts` with cops, encounters, and financial systems.
-5. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
+1. Expand the locale layer to cover the remaining player-facing copy and support additional locales.
+2. Add a player-facing way to choose or swap content packs while keeping Gwinnett as the built-in default.
+3. Expand `src/game/core.ts` with cops, encounters, and financial systems.
+4. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
+5. Add automated tests around the content-pack and locale-backed gameplay flows.
 
 ## Legacy References
 

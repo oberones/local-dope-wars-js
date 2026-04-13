@@ -1,6 +1,7 @@
 export type DrugId = string
 export type CityId = string
 export type ContentPackId = string
+export type LocaleId = string
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'

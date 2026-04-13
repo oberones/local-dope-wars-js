@@ -2,6 +2,7 @@ import {
   GAME_CONFIG,
   getContentPack,
 } from './content'
+import { DEFAULT_LOCALE } from './i18n'
 import type {
   ActivityItem,
   ActivityKind,
@@ -14,6 +15,8 @@ import type {
   NewsTone,
   RunSummary,
 } from './types'
+
+const locale = DEFAULT_LOCALE
 
 function randomInt(min: number, max: number) {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -31,11 +34,6 @@ function shuffle<T>(items: T[]) {
   }
 
   return shuffled
-}
-
-function formatMoney(value: number) {
-  const absolute = Math.abs(value).toLocaleString()
-  return value < 0 ? `-$${absolute}` : `$${absolute}`
 }
 
 function createRunId() {
@@ -240,7 +238,9 @@ export function createNewGame(contentPackId = GAME_CONFIG.defaultContentPackId):
     news: [
       {
         tone: 'system',
-        text: `Fresh off the curb in ${content.citiesById[startingCityId]?.label ?? startingCityId}. Thirty days to stack cash.`,
+        text: locale.game.startingHeadline(
+          content.citiesById[startingCityId]?.label ?? startingCityId,
+        ),
       },
       ...bulletins,
     ],
@@ -248,8 +248,12 @@ export function createNewGame(contentPackId = GAME_CONFIG.defaultContentPackId):
       createActivity(
         initialState,
         'run',
-        'Run started',
-        `Opened the ${content.shortLabel} run with ${formatMoney(initialState.cash)} cash and ${formatMoney(initialState.debt)} in debt.`,
+        locale.game.runStartedTitle,
+        locale.game.runStarted(
+          content.shortLabel,
+          initialState.cash,
+          initialState.debt,
+        ),
       ),
     ],
   })
@@ -372,7 +376,7 @@ export function travelToCity(state: GameState, cityId: CityId) {
       news: [
         {
           tone: 'system',
-          text: `You are already working ${getCurrentCity(state).label}.`,
+          text: locale.game.alreadyWorking(getCurrentCity(state).label),
         },
       ],
     })
@@ -383,7 +387,7 @@ export function travelToCity(state: GameState, cityId: CityId) {
       news: [
         {
           tone: 'alert',
-          text: 'The run clock is spent. Settle inventory, work the bank, and close the books.',
+          text: locale.game.runClockSpent,
         },
       ],
     })
@@ -404,13 +408,13 @@ export function travelToCity(state: GameState, cityId: CityId) {
     news: [
       {
         tone: 'move',
-        text: `Shifted operations to ${city.label}. Street heat is running ${city.cops}%.`,
+        text: locale.game.shiftedOperations(city.label, city.cops),
       },
       ...(nextState.day >= nextState.endDay
         ? [
             {
               tone: 'alert' as const,
-              text: 'Final day reached. Sell off, settle your money, and finalize the run when ready.',
+              text: locale.game.finalDayReached,
             },
           ]
         : []),
@@ -420,8 +424,8 @@ export function travelToCity(state: GameState, cityId: CityId) {
       createActivity(
         nextState,
         'travel',
-        `Moved to ${city.label}`,
-        `Debt rolled to ${formatMoney(nextState.debt)} and the market reset for day ${nextState.day}.`,
+        locale.game.movedToTitle(city.label),
+        locale.game.movedToDetail(nextState.debt, nextState.day),
       ),
     ],
   })
@@ -437,7 +441,7 @@ export function buyDrug(
       news: [
         {
           tone: 'alert',
-          text: 'Set a quantity higher than zero before you buy.',
+          text: locale.game.buyQuantityRequired,
         },
       ],
     })
@@ -452,7 +456,10 @@ export function buyDrug(
       news: [
         {
           tone: 'alert',
-          text: `${drug.label} is dry in ${getCurrentCity(state).label} today.`,
+          text: locale.game.dryMarket(
+            drug.label,
+            getCurrentCity(state).label,
+          ),
         },
       ],
     })
@@ -463,7 +470,7 @@ export function buyDrug(
       news: [
         {
           tone: 'alert',
-          text: 'You need more stash space.',
+          text: locale.game.needMoreStashSpace,
         },
       ],
     })
@@ -476,7 +483,7 @@ export function buyDrug(
       news: [
         {
           tone: 'alert',
-          text: 'You do not have enough cash for that pickup.',
+          text: locale.game.notEnoughCash,
         },
       ],
     })
@@ -495,15 +502,15 @@ export function buyDrug(
     news: [
       {
         tone: 'market',
-        text: `Bought ${quantity} ${drug.label} at ${formatMoney(offer.price)} each.`,
+        text: locale.game.boughtNews(quantity, drug.label, offer.price),
       },
     ],
     activity: [
       createActivity(
         nextState,
         'trade',
-        `Bought ${quantity} ${drug.label}`,
-        `Spent ${formatMoney(total)} in ${getCurrentCity(nextState).label}.`,
+        locale.game.boughtTitle(quantity, drug.label),
+        locale.game.boughtDetail(total, getCurrentCity(nextState).label),
       ),
     ],
   })
@@ -519,7 +526,7 @@ export function sellDrug(
       news: [
         {
           tone: 'alert',
-          text: 'Set a quantity higher than zero before you sell.',
+          text: locale.game.sellQuantityRequired,
         },
       ],
     })
@@ -534,7 +541,10 @@ export function sellDrug(
       news: [
         {
           tone: 'alert',
-          text: `${drug.label} is not moving in ${getCurrentCity(state).label} today.`,
+          text: locale.game.notMoving(
+            drug.label,
+            getCurrentCity(state).label,
+          ),
         },
       ],
     })
@@ -545,7 +555,7 @@ export function sellDrug(
       news: [
         {
           tone: 'alert',
-          text: `You do not own ${quantity} ${drug.label}.`,
+          text: locale.game.doNotOwn(quantity, drug.label),
         },
       ],
     })
@@ -565,15 +575,15 @@ export function sellDrug(
     news: [
       {
         tone: 'market',
-        text: `Sold ${quantity} ${drug.label} at ${formatMoney(offer.price)} each.`,
+        text: locale.game.soldNews(quantity, drug.label, offer.price),
       },
     ],
     activity: [
       createActivity(
         nextState,
         'trade',
-        `Sold ${quantity} ${drug.label}`,
-        `Pulled in ${formatMoney(total)} in ${getCurrentCity(nextState).label}.`,
+        locale.game.soldTitle(quantity, drug.label),
+        locale.game.soldDetail(total, getCurrentCity(nextState).label),
       ),
     ],
   })
@@ -585,7 +595,7 @@ export function depositCash(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'Enter a deposit amount higher than zero.',
+          text: locale.game.depositAmountRequired,
         },
       ],
     })
@@ -598,7 +608,7 @@ export function depositCash(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'You cannot stash more cash than you are carrying.',
+          text: locale.game.depositTooHigh,
         },
       ],
     })
@@ -614,15 +624,15 @@ export function depositCash(state: GameState, amount: number) {
     news: [
       {
         tone: 'system',
-        text: `Deposited ${formatMoney(amount)} into the bank.`,
+        text: locale.game.depositedNews(amount),
       },
     ],
     activity: [
       createActivity(
         nextState,
         'finance',
-        `Deposited ${formatMoney(amount)}`,
-        `Bank reserve climbed to ${formatMoney(nextState.bankDeposit)}.`,
+        locale.game.depositedTitle(amount),
+        locale.game.depositedDetail(nextState.bankDeposit),
       ),
     ],
   })
@@ -634,7 +644,7 @@ export function withdrawCash(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'Enter a withdrawal amount higher than zero.',
+          text: locale.game.withdrawAmountRequired,
         },
       ],
     })
@@ -647,7 +657,7 @@ export function withdrawCash(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'Your bank reserve is not that deep.',
+          text: locale.game.withdrawTooHigh,
         },
       ],
     })
@@ -663,15 +673,15 @@ export function withdrawCash(state: GameState, amount: number) {
     news: [
       {
         tone: 'system',
-        text: `Withdrew ${formatMoney(amount)} from the bank.`,
+        text: locale.game.withdrewNews(amount),
       },
     ],
     activity: [
       createActivity(
         nextState,
         'finance',
-        `Withdrew ${formatMoney(amount)}`,
-        `Cash on hand is now ${formatMoney(nextState.cash)}.`,
+        locale.game.withdrewTitle(amount),
+        locale.game.withdrewDetail(nextState.cash),
       ),
     ],
   })
@@ -683,7 +693,7 @@ export function payDebt(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'Enter a payment amount higher than zero.',
+          text: locale.game.paymentAmountRequired,
         },
       ],
     })
@@ -696,7 +706,7 @@ export function payDebt(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'You cannot pay more debt than your cash on hand or remaining balance.',
+          text: locale.game.paymentTooHigh,
         },
       ],
     })
@@ -712,15 +722,15 @@ export function payDebt(state: GameState, amount: number) {
     news: [
       {
         tone: 'system',
-        text: `Paid down ${formatMoney(amount)} in debt.`,
+        text: locale.game.paidDebtNews(amount),
       },
     ],
     activity: [
       createActivity(
         nextState,
         'finance',
-        `Paid ${formatMoney(amount)} toward debt`,
-        `Outstanding debt dropped to ${formatMoney(nextState.debt)}.`,
+        locale.game.paidDebtTitle(amount),
+        locale.game.paidDebtDetail(nextState.debt),
       ),
     ],
   })
@@ -732,7 +742,7 @@ export function borrowMoney(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'Enter a borrow amount higher than zero.',
+          text: locale.game.borrowAmountRequired,
         },
       ],
     })
@@ -745,7 +755,7 @@ export function borrowMoney(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'No more credit is available on this run.',
+          text: locale.game.noCreditAvailable,
         },
       ],
     })
@@ -756,7 +766,7 @@ export function borrowMoney(state: GameState, amount: number) {
       news: [
         {
           tone: 'alert',
-          text: 'That would push your debt past the current loan ceiling.',
+          text: locale.game.borrowTooHigh,
         },
       ],
     })
@@ -772,15 +782,15 @@ export function borrowMoney(state: GameState, amount: number) {
     news: [
       {
         tone: 'system',
-        text: `Borrowed ${formatMoney(amount)} against the next collection day.`,
+        text: locale.game.borrowedNews(amount),
       },
     ],
     activity: [
       createActivity(
         nextState,
         'finance',
-        `Borrowed ${formatMoney(amount)}`,
-        `Cash rose to ${formatMoney(nextState.cash)} while debt climbed to ${formatMoney(nextState.debt)}.`,
+        locale.game.borrowedTitle(amount),
+        locale.game.borrowedDetail(nextState.cash, nextState.debt),
       ),
     ],
   })

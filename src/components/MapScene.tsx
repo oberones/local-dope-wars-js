@@ -1,6 +1,9 @@
 import type { CSSProperties, KeyboardEvent } from 'react'
 import './MapScene.css'
+import { DEFAULT_LOCALE } from '../game/i18n'
 import type { CityDefinition, CityId, MapSceneDefinition } from '../game/types'
+
+const locale = DEFAULT_LOCALE
 
 function getCityById(cities: CityDefinition[], cityId: CityId) {
   return cities.find((city) => city.id === cityId) ?? cities[0]
@@ -66,21 +69,21 @@ export function MapScene({
       <div className="county-map__sweep" />
       <div className="county-map__hud">
         <span className="county-map__hud-chip">
-          Focus: {focusedCity.label}
+          {locale.map.focus(focusedCity.label)}
         </span>
         <span className="county-map__hud-chip">
-          Heat {focusedCity.cops}%
+          {locale.map.heat(focusedCity.cops)}
         </span>
       </div>
       <div className="county-map__legend">
         <span className="county-map__legend-chip county-map__legend-chip--low">
-          Low heat
+          {locale.map.lowHeat}
         </span>
         <span className="county-map__legend-chip county-map__legend-chip--mid">
-          Active corridor
+          {locale.map.activeCorridor}
         </span>
         <span className="county-map__legend-chip county-map__legend-chip--hot">
-          Hot zone
+          {locale.map.hotZone}
         </span>
       </div>
 
@@ -218,7 +221,7 @@ export function MapScene({
               onKeyDown={handleKeyDown(city.id)}
               tabIndex={0}
               role="button"
-              aria-label={`Travel to ${city.label}`}
+              aria-label={locale.map.travelTo(city.label)}
               aria-disabled={isLocked}
             >
               <circle className="county-map__city-hit" r="6.4" />
