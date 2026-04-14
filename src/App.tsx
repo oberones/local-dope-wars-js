@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
-import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, getContentPack } from './game/content'
+import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GAME_CONFIG, getContentPack } from './game/content'
 import { DEFAULT_LOCALE } from './game/i18n'
 import { MapScene } from './components/MapScene'
 import {
@@ -15,12 +15,15 @@ import {
   getMaxBuyQuantity,
   getMaxDebtPayment,
   getMaxDepositAmount,
+  getHealthRecoveryCost,
+  getMaxHealthRecoveryAmount,
   getMaxSellQuantity,
   getMaxWithdrawAmount,
   getNetWorth,
   getUsedSpace,
   isRunOver,
   payDebt,
+  recoverHealth,
   sellDrug,
   travelToCity,
   withdrawCash,
@@ -614,6 +617,8 @@ function App() {
   const usedSpace = getUsedSpace(game)
   const runValue = getNetWorth(game)
   const runClosed = isRunOver(game)
+  const travelLockedByHealth = game.health <= 0
+  const travelDisabled = runClosed || travelLockedByHealth
   const liveOffers = drugs.filter((drug) => game.market[drug.id].available)
   const daysRemaining = Math.max(game.endDay - game.day, 0)
   const dayProgress = Math.min((game.day / game.endDay) * 100, 100)
@@ -621,6 +626,8 @@ function App() {
   const maxWithdraw = getMaxWithdrawAmount(game)
   const maxDebtPayment = getMaxDebtPayment(game)
   const maxBorrow = getMaxBorrowAmount(game)
+  const healthRecoveryAmount = getMaxHealthRecoveryAmount(game)
+  const healthRecoveryCost = getHealthRecoveryCost(game)
   const depositAmount = parsePositiveInteger(financeDrafts.deposit)
   const withdrawAmount = parsePositiveInteger(financeDrafts.withdraw)
   const debtPaymentAmount = parsePositiveInteger(financeDrafts.payDebt)
@@ -737,6 +744,8 @@ function App() {
             <p className="progress-cluster__note">
               {runClosed
                 ? locale.run.finalDayNote
+                : travelLockedByHealth
+                  ? locale.run.streetMedicTravelLock
                 : locale.run.activeRunNote(daysRemaining)}
             </p>
           </div>
@@ -776,6 +785,10 @@ function App() {
         <article className="panel stat-card">
           <p className="meta-label">{locale.run.cashOnHand}</p>
           <p className="stat-card__value">{locale.formatMoney(game.cash)}</p>
+        </article>
+        <article className="panel stat-card">
+          <p className="meta-label">{locale.run.health}</p>
+          <p className="stat-card__value">{game.health}%</p>
         </article>
         <article className="panel stat-card">
           <p className="meta-label">{locale.run.bankReserve}</p>
@@ -869,6 +882,10 @@ function App() {
 
           <div className="finance-panel__summary">
             <div className="finance-summary-card">
+              <p className="meta-label">{locale.run.health}</p>
+              <p>{game.health}%</p>
+            </div>
+            <div className="finance-summary-card">
               <p className="meta-label">{locale.run.bankReserve}</p>
               <p>{locale.formatMoney(game.bankDeposit)}</p>
             </div>
@@ -883,6 +900,38 @@ function App() {
           </div>
 
           <div className="finance-panel__grid">
+            <label className="finance-control">
+              <span>{locale.run.streetMedicLabel}</span>
+              <div className="finance-control__row finance-control__row--single">
+                <div className="finance-control__readout">
+                  {healthRecoveryAmount > 0
+                    ? `+${healthRecoveryAmount} health`
+                    : `${game.health}%`}
+                </div>
+                <button
+                  className="ghost-button"
+                  disabled={healthRecoveryAmount <= 0}
+                  onClick={() =>
+                    setGame((current) =>
+                      current ? recoverHealth(current) : current,
+                    )
+                  }
+                >
+                  {locale.run.streetMedicButton}
+                </button>
+              </div>
+              <p className="finance-control__hint">
+                {healthRecoveryAmount > 0
+                  ? locale.run.streetMedicReady(
+                      healthRecoveryAmount,
+                      healthRecoveryCost,
+                    )
+                  : game.health >= GAME_CONFIG.maxHealth
+                    ? locale.run.streetMedicNoNeed
+                    : locale.run.streetMedicNoCash}
+              </p>
+            </label>
+
             <label className="finance-control">
               <span>{locale.run.depositLabel}</span>
               <div className="finance-control__row">
@@ -1068,7 +1117,7 @@ function App() {
               cities={cities}
               currentCityId={game.currentCityId}
               focusedCityId={focusedCityId}
-              disableTravel={runClosed}
+              disableTravel={travelDisabled}
               onFocusCity={setFocusedCityId}
               onTravelCity={handleTravel}
             />
@@ -1097,19 +1146,23 @@ function App() {
                       ? locale.run.currentTerritory
                       : runClosed
                         ? locale.run.travelLocked
+                        : travelLockedByHealth
+                          ? locale.run.tooHurtToTravel
                         : locale.run.availableToTravel}
                   </dd>
                 </div>
               </dl>
               <button
                 className="accent-button city-brief__action"
-                disabled={focusedCity.id === game.currentCityId || runClosed}
+                disabled={focusedCity.id === game.currentCityId || travelDisabled}
                 onClick={() => handleTravel(focusedCity.id)}
               >
                 {focusedCity.id === game.currentCityId
                   ? locale.run.currentTerritory
                   : runClosed
                     ? locale.run.travelLocked
+                    : travelLockedByHealth
+                      ? locale.run.tooHurtToTravel
                     : locale.map.travelTo(focusedCity.label)}
               </button>
             </div>
