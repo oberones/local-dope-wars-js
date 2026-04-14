@@ -673,8 +673,12 @@ function App() {
     ? drugs.find((drug) => drug.id === inventoryLeader.drugId)
     : undefined
   const featuredModifierDrug =
+    liveOffers.find((drug) => game.market[drug.id].event) ??
     liveOffers.find((drug) => game.market[drug.id].modifier !== 'standard') ??
     cheapestOffer
+  const featuredMarketEvent = featuredModifierDrug
+    ? game.market[featuredModifierDrug.id].event
+    : undefined
   const depositHint = actionLimitHint(
     depositAmount,
     maxDeposit,
@@ -842,7 +846,9 @@ function App() {
           <h2>{featuredModifierDrug?.label ?? currentCity.label}</h2>
           <p className="signal-card__value">
             {featuredModifierDrug
-              ? locale.formatMarketModifier(game.market[featuredModifierDrug.id].modifier)
+              ? featuredMarketEvent
+                ? locale.formatMarketEventKind(featuredMarketEvent.kind)
+                : locale.formatMarketModifier(game.market[featuredModifierDrug.id].modifier)
               : locale.formatHeatLabel(currentCity.cops)}
           </p>
           <p className="signal-card__meta">
@@ -1208,6 +1214,19 @@ function App() {
             const maxSell = getMaxSellQuantity(game, drug.id)
             const draftQuantity = parsePositiveInteger(tradeDrafts[drug.id])
             const hint = tradeHint(draftQuantity, maxBuy, maxSell, offer.available)
+            const badgeLabel =
+              offer.available
+                ? offer.event
+                  ? locale.formatMarketEventKind(offer.event.kind)
+                  : locale.formatMarketModifier(offer.modifier)
+                : locale.run.hidden
+            const badgeClassName = `offer-card__badge${
+              offer.available && offer.event
+                ? ` offer-card__badge--${offer.event.kind}`
+                : offer.available && offer.modifier !== 'standard'
+                  ? ` offer-card__badge--${offer.modifier}`
+                  : ''
+            }`
             const buyDisabled =
               !offer.available ||
               draftQuantity === null ||
@@ -1241,11 +1260,7 @@ function App() {
                         ? locale.formatMoney(offer.price)
                         : locale.run.offMarket}
                     </span>
-                    <span className="offer-card__badge">
-                      {offer.available
-                        ? locale.formatMarketModifier(offer.modifier)
-                        : locale.run.hidden}
-                    </span>
+                    <span className={badgeClassName}>{badgeLabel}</span>
                   </div>
                 </div>
 

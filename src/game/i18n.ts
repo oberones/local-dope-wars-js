@@ -1,4 +1,4 @@
-import type { ActivityKind, LocaleId, MarketModifier } from './types'
+import type { ActivityKind, LocaleId, MarketEventKind, MarketModifier } from './types'
 
 const moneyFormatter = new Intl.NumberFormat('en-US')
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -68,6 +68,27 @@ function formatMarketModifier(modifier: MarketModifier) {
   return 'Steady'
 }
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled market event kind: ${String(value)}`)
+}
+
+function formatMarketEventKind(kind: MarketEventKind) {
+  switch (kind) {
+    case 'flood':
+      return 'Flood'
+    case 'shortage':
+      return 'Shortage'
+    case 'raid':
+      return 'Raid'
+    case 'bust':
+      return 'Bust'
+    case 'lucky-break':
+      return 'Lucky break'
+    default:
+      return assertNever(kind)
+  }
+}
+
 function formatHeatLabel(cops: number) {
   if (cops < 20) {
     return 'Low profile'
@@ -93,6 +114,7 @@ export const EN_US_LOCALE = {
   formatScoreboardTitle,
   formatActivityKind,
   formatMarketModifier,
+  formatMarketEventKind,
   formatHeatLabel,
   menu: {
     eyebrow: 'Starter content pack',
@@ -139,6 +161,7 @@ export const EN_US_LOCALE = {
       'Banking, withdrawals, debt payoff, borrowing, and patch-up recovery are live.',
       'Players can now choose between bundled starter location packs for new runs.',
       'Travel heat now drives encounter risk, stash losses, and cash pressure.',
+      'Drug lanes can now hit typed floods, shortages, raids, busts, and lucky breaks.',
     ],
   },
   summary: {
@@ -191,8 +214,8 @@ export const EN_US_LOCALE = {
       `Lowest price currently moving in ${cityLabel}.`,
     highestTicketMeta: 'Biggest single-unit payout on the board right now.',
     marketPulseMeta:
-      'The loudest pricing shift currently on the board.',
-    marketPulseIdle: 'No special modifiers are active tonight.',
+      'The loudest active event or pricing swing currently on the board.',
+    marketPulseIdle: 'No special market events are active tonight.',
     emptyStash: 'Empty stash',
     emptyInventoryBoard: 'No inventory yet, so the board is clean.',
     inventoryLeaderMeta: 'Largest stack currently in inventory.',
@@ -240,7 +263,7 @@ export const EN_US_LOCALE = {
     tradingFloorEyebrow: 'Trading floor',
     marketBoardHeading: 'Market board',
     marketBoardNote:
-      'Trading still runs on the pure game core, but now the board gives clearer input limits so you can see edge cases before a move fires.',
+      'Trading still runs on the pure game core, but the board now reflects typed market events and clearer input limits before a move fires.',
     offMarket: 'Off market',
     hidden: 'Hidden',
     ownedLabel: (quantity: number) => `Owned ${quantity}`,

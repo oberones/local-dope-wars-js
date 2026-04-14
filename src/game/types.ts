@@ -5,6 +5,12 @@ export type LocaleId = string
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert' | 'encounter'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
+export type MarketEventKind =
+  | 'flood'
+  | 'shortage'
+  | 'raid'
+  | 'bust'
+  | 'lucky-break'
 export type ActivityKind = 'run' | 'travel' | 'trade' | 'finance' | 'encounter'
 
 export interface PriceBand {
@@ -16,6 +22,12 @@ export interface MarketTrigger extends PriceBand {
   headline: string
 }
 
+export interface MarketEventDefinition extends MarketTrigger {
+  kind: MarketEventKind
+  modifier: Exclude<MarketModifier, 'standard'>
+  chance?: number
+}
+
 export interface DrugDefinition {
   id: DrugId
   label: string
@@ -24,6 +36,7 @@ export interface DrugDefinition {
   basePrice: PriceBand
   cheap?: MarketTrigger
   expensive?: MarketTrigger
+  marketEvents?: MarketEventDefinition[]
 }
 
 export interface CityDefinition {
@@ -72,6 +85,10 @@ export interface MarketOffer {
   available: boolean
   price: number
   modifier: MarketModifier
+  event?: {
+    kind: MarketEventKind
+    headline: string
+  }
 }
 
 export interface NewsItem {
