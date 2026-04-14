@@ -67,8 +67,15 @@ Makefile equivalents:
 make preview
 make lint
 make build
+make build-subpath
 make check
 make help
+```
+
+`make build-subpath` defaults to `SUBPATH_BASE=/apps/local-dope-wars/`. You can override it for another mount point:
+
+```bash
+make build-subpath SUBPATH_BASE=/apps/some-other-path/
 ```
 
 ## How To Play
@@ -106,6 +113,12 @@ Or with Make:
 
 ```bash
 make test
+```
+
+For a static deploy under `https://malevolentgods.com/apps/local-dope-wars/`, build with:
+
+```bash
+make build-subpath
 ```
 
 When changing gameplay or UI in meaningful ways, contributors should run `lint` and `build` before finishing work.

@@ -11,6 +11,8 @@ import {
   createNewGame,
   depositCash,
   getCurrentCity,
+  getDailyBankYield,
+  getDebtCollectionChance,
   getMaxBorrowAmount,
   getMaxBuyQuantity,
   getMaxDebtPayment,
@@ -626,6 +628,8 @@ function App() {
   const maxWithdraw = getMaxWithdrawAmount(game)
   const maxDebtPayment = getMaxDebtPayment(game)
   const maxBorrow = getMaxBorrowAmount(game)
+  const dailyBankYield = getDailyBankYield(game)
+  const debtCollectionChance = getDebtCollectionChance(game)
   const healthRecoveryAmount = getMaxHealthRecoveryAmount(game)
   const healthRecoveryCost = getHealthRecoveryCost(game)
   const depositAmount = parsePositiveInteger(financeDrafts.deposit)
@@ -903,6 +907,14 @@ function App() {
               <p className="meta-label">{locale.run.creditRemaining}</p>
               <p>{locale.formatMoney(maxBorrow)}</p>
             </div>
+            <div className="finance-summary-card">
+              <p className="meta-label">{locale.run.nextBankYield}</p>
+              <p>{locale.formatMoney(dailyBankYield)}</p>
+            </div>
+            <div className="finance-summary-card">
+              <p className="meta-label">{locale.run.collectorRisk}</p>
+              <p>{Math.round(debtCollectionChance * 100)}%</p>
+            </div>
           </div>
 
           <div className="finance-panel__grid">
@@ -1064,7 +1076,9 @@ function App() {
                   borrowHint.error ? ' finance-control__hint--error' : ''
                 }`}
               >
-                {borrowHint.text}
+                {debtCollectionChance > 0
+                  ? `${borrowHint.text} ${Math.round(debtCollectionChance * 100)}% collector risk on the next move.`
+                  : locale.hints.noCollectorRisk}
               </p>
             </label>
           </div>

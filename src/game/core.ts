@@ -340,6 +340,88 @@ function getTravelEncounterChance(cops: number) {
   )
 }
 
+export function getDailyBankYield(state: GameState) {
+  if (state.bankDeposit <= 0) {
+    return 0
+  }
+
+  return Math.max(
+    Math.round(state.bankDeposit * GAME_CONFIG.bankDailyYieldRate) - state.bankDeposit,
+    0,
+  )
+}
+
+export function getDebtCollectionChance(state: GameState) {
+  if (state.debt <= GAME_CONFIG.debtCollectionThreshold) {
+    return 0
+  }
+
+  return Math.min(
+    GAME_CONFIG.debtCollectionBaseChance +
+      (state.debt - GAME_CONFIG.debtCollectionThreshold) /
+        GAME_CONFIG.debtCollectionDebtChanceDivisor,
+    GAME_CONFIG.debtCollectionMaxChance,
+  )
+}
+
+function resolveDebtCollection(state: GameState, city: ReturnType<typeof getCurrentCity>) {
+  const collectionChance = getDebtCollectionChance(state)
+
+  if (collectionChance <= 0 || Math.random() >= collectionChance) {
+    return state
+  }
+
+  const debtOverage = Math.max(state.debt - GAME_CONFIG.debtCollectionThreshold, 0)
+  const target = Math.max(
+    GAME_CONFIG.debtCollectionMinTake,
+    Math.round(
+      state.debt *
+        (GAME_CONFIG.debtCollectionBaseShare +
+          debtOverage / GAME_CONFIG.debtCollectionDebtShareDivisor),
+    ),
+  )
+  const bankTaken = Math.min(
+    state.bankDeposit,
+    Math.round(target * GAME_CONFIG.debtCollectionBankTakeShare),
+  )
+  const cashTaken = Math.min(state.cash, target - bankTaken)
+  const uncovered = Math.max(target - bankTaken - cashTaken, 0)
+  const healthLoss =
+    uncovered > 0 ?
+      Math.min(
+        state.health,
+        randomInt(
+          GAME_CONFIG.debtCollectionDamageMin,
+          GAME_CONFIG.debtCollectionDamageMax,
+        ),
+      )
+    : 0
+  const totalTaken = bankTaken + cashTaken
+  const nextState: GameState = {
+    ...state,
+    bankDeposit: state.bankDeposit - bankTaken,
+    cash: state.cash - cashTaken,
+    health: Math.max(state.health - healthLoss, 0),
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'alert',
+        text: locale.game.debtCollectionNews(totalTaken, healthLoss),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        locale.game.debtCollectionTitle,
+        locale.game.debtCollectionDetail(city.label, bankTaken, cashTaken, nextState.health),
+      ),
+    ],
+  })
+}
+
 function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCurrentCity>) {
   if (Math.random() >= getTravelEncounterChance(city.cops)) {
     return state
@@ -628,11 +710,13 @@ export function travelToCity(state: GameState, cityId: CityId) {
   const content = getContentPack(state.contentPackId)
   const city = content.citiesById[cityId] ?? content.cities[0]
   const { market, bulletins } = buildMarket(state.contentPackId, cityId)
+  const bankYield = getDailyBankYield(state)
   const nextState: GameState = {
     ...state,
     currentCityId: cityId,
     day: state.day + 1,
     debt: Math.round(state.debt * GAME_CONFIG.dailyInterestRate),
+    bankDeposit: state.bankDeposit + bankYield,
     market,
   }
 
@@ -650,6 +734,14 @@ export function travelToCity(state: GameState, cityId: CityId) {
             },
           ]
         : []),
+      ...(bankYield > 0
+        ? [
+            {
+              tone: 'system' as const,
+              text: locale.game.bankYieldNews(bankYield),
+            },
+          ]
+        : []),
       ...bulletins,
     ],
     activity: [
@@ -659,10 +751,22 @@ export function travelToCity(state: GameState, cityId: CityId) {
         locale.game.movedToTitle(city.label),
         locale.game.movedToDetail(nextState.debt, nextState.day),
       ),
+      ...(bankYield > 0
+        ? [
+            createActivity(
+              nextState,
+              'finance',
+              locale.game.bankYieldTitle(bankYield),
+              locale.game.bankYieldDetail(nextState.bankDeposit),
+            ),
+          ]
+        : []),
     ],
   })
 
-  return resolveTravelEncounter(traveledState, city)
+  const financedState = resolveDebtCollection(traveledState, city)
+
+  return resolveTravelEncounter(financedState, city)
 }
 
 export function buyDrug(
