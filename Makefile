@@ -15,8 +15,8 @@ help:
 		'  make lint           Run eslint' \
 		'  make build          Build the production bundle' \
 		'  make build-subpath  Build for a subpath deploy (default /apps/local-dope-wars/)' \
-		'  make test           Run the current verification suite (lint + build)' \
-		'  make check          Alias for test' \
+		'  make test           Run the automated test suite' \
+		'  make check          Run lint, tests, and build' \
 		'  make preview        Preview the production bundle locally' \
 		'  make docker-config  Render the resolved docker compose config' \
 		'  make docker-build   Build the production container image' \
@@ -41,9 +41,10 @@ build-subpath:
 	VITE_BASE_PATH=$(SUBPATH_BASE) $(NPM) run build
 
 test:
-	$(NPM) run check
+	$(NPM) run test
 
-check: test
+check:
+	$(NPM) run check
 
 preview:
 	$(NPM) run preview
