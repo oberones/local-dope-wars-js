@@ -233,6 +233,8 @@ export const EN_US_LOCALE = {
       'You are too beat up to travel. Patch up before moving again.',
     outstandingDebt: 'Outstanding debt',
     creditRemaining: 'Credit remaining',
+    nextBankYield: 'Next bank yield',
+    collectorRisk: 'Collector risk',
     depositLabel: 'Deposit to bank',
     depositButton: 'Deposit',
     withdrawLabel: 'Withdraw from bank',
@@ -288,6 +290,7 @@ export const EN_US_LOCALE = {
     debtCleared: 'Debt is cleared.',
     noCashForDebt: 'No cash available to pay debt.',
     loanCeilingReached: 'Loan ceiling already reached for this run.',
+    noCollectorRisk: 'Collectors are not leaning on this run yet.',
     offMarket:
       'Off market here. You can only unload this elsewhere.',
     buyLimitAndInventory: (maxBuy: number, maxSell: number) =>
@@ -323,6 +326,12 @@ export const EN_US_LOCALE = {
     movedToTitle: (cityLabel: string) => `Moved to ${cityLabel}`,
     movedToDetail: (debt: number, day: number) =>
       `Debt rolled to ${formatMoney(debt)} and the market reset for day ${day}.`,
+    bankYieldNews: (amount: number) =>
+      `Your bank reserve quietly kicked back ${formatMoney(amount)} overnight.`,
+    bankYieldTitle: (amount: number) =>
+      `Banked ${formatMoney(amount)} in interest`,
+    bankYieldDetail: (bankDeposit: number) =>
+      `Bank reserve rose to ${formatMoney(bankDeposit)} before the next market opened.`,
     buyQuantityRequired: 'Set a quantity higher than zero before you buy.',
     dryMarket: (drugLabel: string, cityLabel: string) =>
       `${drugLabel} is dry in ${cityLabel} today.`,
@@ -400,6 +409,18 @@ export const EN_US_LOCALE = {
     borrowedTitle: (amount: number) => `Borrowed ${formatMoney(amount)}`,
     borrowedDetail: (cash: number, debt: number) =>
       `Cash rose to ${formatMoney(cash)} while debt climbed to ${formatMoney(debt)}.`,
+    debtCollectionNews: (amount: number, healthLoss: number) =>
+      healthLoss > 0
+        ? `Collectors stripped ${formatMoney(amount)} and left you down ${healthLoss} health.`
+        : `Collectors skimmed ${formatMoney(amount)} off your money trail.`,
+    debtCollectionTitle: 'Collection pressure hit',
+    debtCollectionDetail: (
+      cityLabel: string,
+      bankTaken: number,
+      cashTaken: number,
+      health: number,
+    ) =>
+      `Pressure around ${cityLabel} burned ${formatMoney(bankTaken)} from the bank and ${formatMoney(cashTaken)} in cash. Health is now ${health}%.`,
     noRecoveryNeeded: 'You do not need to patch up right now.',
     noRecoveryCash: 'You do not have the cash to patch yourself up.',
     recoveredHealthNews: (health: number, cost: number) =>

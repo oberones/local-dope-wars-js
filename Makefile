@@ -3,8 +3,9 @@ SHELL := /bin/sh
 SERVICE := local-dope-wars
 COMPOSE := docker compose
 NPM := npm
+SUBPATH_BASE ?= /apps/local-dope-wars/
 
-.PHONY: help install dev lint build test check preview docker-config docker-build docker-up docker-down docker-logs clean
+.PHONY: help install dev lint build build-subpath test check preview docker-config docker-build docker-up docker-down docker-logs clean
 
 help:
 	@printf '%s\n' \
@@ -13,6 +14,7 @@ help:
 		'  make dev            Run the Vite dev server' \
 		'  make lint           Run eslint' \
 		'  make build          Build the production bundle' \
+		'  make build-subpath  Build for a subpath deploy (default /apps/local-dope-wars/)' \
 		'  make test           Run the current verification suite (lint + build)' \
 		'  make check          Alias for test' \
 		'  make preview        Preview the production bundle locally' \
@@ -34,6 +36,9 @@ lint:
 
 build:
 	$(NPM) run build
+
+build-subpath:
+	VITE_BASE_PATH=$(SUBPATH_BASE) $(NPM) run build
 
 test:
 	$(NPM) run check
