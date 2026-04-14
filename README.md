@@ -30,12 +30,24 @@ cd local-dope-wars
 npm install
 ```
 
+Or use the Makefile wrapper:
+
+```bash
+make install
+```
+
 ## Run The App
 
 Start the local development server:
 
 ```bash
 npm run dev
+```
+
+Or:
+
+```bash
+make dev
 ```
 
 Then open the local Vite URL shown in the terminal.
@@ -47,6 +59,16 @@ npm run preview
 npm run lint
 npm run build
 npm run check
+```
+
+Makefile equivalents:
+
+```bash
+make preview
+make lint
+make build
+make check
+make help
 ```
 
 ## How To Play
@@ -80,7 +102,27 @@ Or run both together:
 npm run check
 ```
 
+Or with Make:
+
+```bash
+make test
+```
+
 When changing gameplay or UI in meaningful ways, contributors should run `lint` and `build` before finishing work.
+
+## Deployment Helpers
+
+The repository now includes container and deployment helpers for production:
+
+```bash
+make docker-config
+make docker-build
+make docker-up
+make docker-down
+make docker-logs
+```
+
+`docker-compose.yml` joins the external Docker network `ai-backend`, so that network must already exist on the target host.
 
 ## Project Structure
 
@@ -117,6 +159,12 @@ Recommended workflow:
 ```bash
 npm run lint
 npm run build
+```
+
+Or:
+
+```bash
+make check
 ```
 
 5. If you create commits for shared work, use Conventional Commits and include a short subject like `feat: add encounter events`, a brief body describing what changed, and a validation note such as `Validation: npm run lint && npm run build`.

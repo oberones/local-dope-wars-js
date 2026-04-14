@@ -100,10 +100,21 @@ npm run lint
 npm run build
 ```
 
+Equivalent Makefile shortcuts are also available:
+
+```bash
+make dev
+make lint
+make build
+make check
+make docker-config
+make docker-build
+make docker-up
+```
+
 Before finishing meaningful source changes:
 
-1. Run `npm run lint`.
-2. Run `npm run build`.
+1. Run `npm run lint` and `npm run build`, or `make check`.
 3. Report any limitations or skipped verification clearly.
 
 When asked to create a commit:
