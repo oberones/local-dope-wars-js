@@ -1,3 +1,11 @@
+## 0.2.0 (2026-04-13)
+
+### Feat
+
+- add heat encounters and recovery loop
+- add bundled content pack selection
+- add typed locale copy layer
+
 ## 0.1.3 (2026-04-13)
 
 ### Refactor
