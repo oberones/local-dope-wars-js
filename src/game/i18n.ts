@@ -68,24 +68,25 @@ function formatMarketModifier(modifier: MarketModifier) {
   return 'Steady'
 }
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled market event kind: ${String(value)}`)
+}
+
 function formatMarketEventKind(kind: MarketEventKind) {
-  if (kind === 'flood') {
-    return 'Flood'
+  switch (kind) {
+    case 'flood':
+      return 'Flood'
+    case 'shortage':
+      return 'Shortage'
+    case 'raid':
+      return 'Raid'
+    case 'bust':
+      return 'Bust'
+    case 'lucky-break':
+      return 'Lucky break'
+    default:
+      return assertNever(kind)
   }
-
-  if (kind === 'shortage') {
-    return 'Shortage'
-  }
-
-  if (kind === 'raid') {
-    return 'Raid'
-  }
-
-  if (kind === 'bust') {
-    return 'Bust'
-  }
-
-  return 'Lucky break'
 }
 
 function formatHeatLabel(cops: number) {
