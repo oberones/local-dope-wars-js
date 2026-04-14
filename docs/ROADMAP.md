@@ -22,7 +22,7 @@ Still missing:
 - Configurable location/content packs beyond the built-in defaults
 - Deeper game systems
 - Production-ready art assets
-- Automated tests
+- Broader automated test coverage
 - Endgame polish and progression balance
 
 ## Guiding Priorities
