@@ -120,15 +120,16 @@ When asked to create a commit:
 - The current built-in content still defaults to the Gwinnett County location set.
 - A typed content-pack foundation now includes a player-facing launch-screen picker and more than one bundled starter pack.
 - A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
-- Save/load, cops, random encounters, weapons, bank depth, and endgame polish are still pending.
+- Basic cops/heat-driven travel encounters and patch-up recovery are now live, but deeper event variety and long-term health systems are still pending.
+- Save/load, weapons, richer bank depth, and endgame polish are still pending.
 
 ## Good Next Steps
 
 1. Expand the locale layer to cover the remaining player-facing copy and support additional locales.
-2. Add more bundled or importable content packs beyond the current starter set.
-3. Expand `src/game/core.ts` with cops, encounters, and financial systems.
+2. Deepen the encounter system with raids, shortages, lucky breaks, and other event-table variety.
+3. Add more bundled or importable content packs beyond the current starter set.
 4. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
-5. Add automated tests around the content-pack and locale-backed gameplay flows.
+5. Add automated tests around the content-pack and encounter-backed gameplay flows.
 
 ## Legacy References
 
