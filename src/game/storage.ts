@@ -1,8 +1,9 @@
 import { getContentPack, hasContentPack } from './content'
-import type { GameState, HighScoreEntry } from './types'
+import type { ContentPackId, GameState, HighScoreEntry } from './types'
 
 const SAVE_KEY = 'local-dope-wars.active-run.v1'
 const HIGH_SCORES_KEY = 'local-dope-wars.high-scores.v1'
+const SELECTED_PACK_KEY = 'local-dope-wars.selected-pack.v1'
 const MAX_HIGH_SCORES = 10
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -196,4 +197,32 @@ export function recordHighScore(entry: HighScoreEntry) {
   writeStorage(HIGH_SCORES_KEY, nextScores)
 
   return nextScores
+}
+
+export function loadSelectedContentPackId() {
+  const stored = readStorage<{ version: number; contentPackId: unknown }>(
+    SELECTED_PACK_KEY,
+  )
+
+  if (
+    !stored ||
+    stored.version !== 1 ||
+    typeof stored.contentPackId !== 'string' ||
+    !hasContentPack(stored.contentPackId)
+  ) {
+    return null
+  }
+
+  return stored.contentPackId as ContentPackId
+}
+
+export function saveSelectedContentPackId(contentPackId: ContentPackId) {
+  if (!hasContentPack(contentPackId)) {
+    return
+  }
+
+  writeStorage(SELECTED_PACK_KEY, {
+    version: 1,
+    contentPackId,
+  })
 }
