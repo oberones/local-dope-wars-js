@@ -46,6 +46,7 @@ function cloneDrugDefinitions(drugs: DrugDefinition[]) {
     ...drug,
     cheap: drug.cheap ? { ...drug.cheap } : undefined,
     expensive: drug.expensive ? { ...drug.expensive } : undefined,
+    marketEvents: drug.marketEvents?.map((event) => ({ ...event })),
   }))
 }
 
@@ -56,6 +57,17 @@ const GWINNETT_DRUGS: DrugDefinition[] = [
     flavor: 'Late-night tab run',
     accent: '#f97316',
     basePrice: { min: 1000, max: 4400 },
+    marketEvents: [
+      {
+        kind: 'bust',
+        modifier: 'expensive',
+        chance: 0.03,
+        min: 5400,
+        max: 8600,
+        headline:
+          'A busted tab cook scorched supply nearby. Acid prices just jumped.',
+      },
+    ],
     cheap: {
       min: 400,
       max: 1100,
@@ -73,6 +85,17 @@ const GWINNETT_DRUGS: DrugDefinition[] = [
     flavor: 'Club supply with a high ceiling',
     accent: '#f4c95d',
     basePrice: { min: 15000, max: 29000 },
+    marketEvents: [
+      {
+        kind: 'raid',
+        modifier: 'expensive',
+        chance: 0.04,
+        min: 42000,
+        max: 76000,
+        headline:
+          'A regional supply raid torched the coke lane. Prices are exploding.',
+      },
+    ],
     expensive: {
       min: 40000,
       max: 70000,
@@ -122,6 +145,17 @@ const GWINNETT_DRUGS: DrugDefinition[] = [
     flavor: 'Party stock with reliable spread',
     accent: '#38bdf8',
     basePrice: { min: 1500, max: 4400 },
+    marketEvents: [
+      {
+        kind: 'lucky-break',
+        modifier: 'cheap',
+        chance: 0.05,
+        min: 420,
+        max: 1400,
+        headline:
+          'A careless festival courier dumped party stock nearby. Ecstasy is cheap tonight.',
+      },
+    ],
   },
   {
     id: 'oxy',

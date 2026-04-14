@@ -8,8 +8,10 @@ import type {
   ActivityKind,
   CityId,
   ContentPackId,
+  DrugDefinition,
   DrugId,
   GameState,
+  MarketEventDefinition,
   MarketOffer,
   MarketTrigger,
   NewsTone,
@@ -134,12 +136,40 @@ function createActivity(
   }
 }
 
-function buildHeadline(trigger: MarketTrigger | undefined) {
-  if (!trigger) {
-    return undefined
+function createDefaultMarketEvent(
+  trigger: MarketTrigger,
+  kind: MarketEventDefinition['kind'],
+  modifier: MarketEventDefinition['modifier'],
+): MarketEventDefinition {
+  return {
+    ...trigger,
+    kind,
+    modifier,
+  }
+}
+
+function getDrugMarketEvents(drug: DrugDefinition) {
+  const events = [...(drug.marketEvents ?? [])]
+
+  if (drug.cheap) {
+    events.push(createDefaultMarketEvent(drug.cheap, 'flood', 'cheap'))
   }
 
-  return trigger.headline
+  if (drug.expensive) {
+    events.push(createDefaultMarketEvent(drug.expensive, 'shortage', 'expensive'))
+  }
+
+  return events
+}
+
+function selectDrugMarketEvent(drug: DrugDefinition) {
+  for (const event of getDrugMarketEvents(drug)) {
+    if (Math.random() < (event.chance ?? GAME_CONFIG.marketEventChance)) {
+      return event
+    }
+  }
+
+  return undefined
 }
 
 function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) {
@@ -163,24 +193,12 @@ function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) 
     let min = drug.basePrice.min
     let max = drug.basePrice.max
     let modifier: MarketOffer['modifier'] = 'standard'
-    let headline: string | undefined
+    const event = selectDrugMarketEvent(drug)
 
-    if (
-      drug.cheap &&
-      Math.random() < GAME_CONFIG.marketEventChance
-    ) {
-      min = drug.cheap.min
-      max = drug.cheap.max
-      modifier = 'cheap'
-      headline = buildHeadline(drug.cheap)
-    } else if (
-      drug.expensive &&
-      Math.random() < GAME_CONFIG.marketEventChance
-    ) {
-      min = drug.expensive.min
-      max = drug.expensive.max
-      modifier = 'expensive'
-      headline = buildHeadline(drug.expensive)
+    if (event) {
+      min = event.min
+      max = event.max
+      modifier = event.modifier
     }
 
     market[drug.id] = {
@@ -188,12 +206,19 @@ function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) 
       available: true,
       price: randomInt(min, max),
       modifier,
+      event:
+        event ?
+          {
+            kind: event.kind,
+            headline: event.headline,
+          }
+        : undefined,
     }
 
-    if (headline) {
+    if (event) {
       bulletins.push({
         tone: 'market',
-        text: headline,
+        text: event.headline,
       })
     }
   }

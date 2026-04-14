@@ -1143,6 +1143,25 @@
   text-transform: uppercase;
 }
 
+.offer-card__badge--cheap,
+.offer-card__badge--flood,
+.offer-card__badge--lucky-break {
+  background: rgba(34, 197, 94, 0.14);
+  color: #baf5c8;
+}
+
+.offer-card__badge--expensive,
+.offer-card__badge--shortage {
+  background: rgba(244, 197, 93, 0.14);
+  color: #f4d99a;
+}
+
+.offer-card__badge--raid,
+.offer-card__badge--bust {
+  background: rgba(249, 115, 22, 0.16);
+  color: #ffcfaa;
+}
+
 .offer-card__stats {
   display: flex;
   justify-content: space-between;
