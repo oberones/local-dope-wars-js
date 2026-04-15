@@ -8,6 +8,7 @@ import {
   getDebtCollectionChance,
   payPawnDebt,
   pawnGear,
+  resolvePendingEncounter,
   takePawnAdvance,
   travelToCity,
 } from '../src/game/core'
@@ -223,9 +224,14 @@ describe('game core regressions', () => {
     mockRandomSequence([], 0)
     const armoredResult = travelToCity(armoredState, 'lawrenceville')
 
-    expect(bareResult.health).toBe(92)
-    expect(armoredResult.health).toBe(95)
-    expect(armoredResult.health).toBeGreaterThan(bareResult.health)
+    const fledBare = resolvePendingEncounter(bareResult, 'flee')
+    const fledArmored = resolvePendingEncounter(armoredResult, 'flee')
+
+    expect(bareResult.pendingEncounter?.kind).toBe('cop-stop')
+    expect(armoredResult.pendingEncounter?.kind).toBe('cop-stop')
+    expect(fledBare.health).toBe(92)
+    expect(fledArmored.health).toBe(95)
+    expect(fledArmored.health).toBeGreaterThan(fledBare.health)
     expect(armoredResult.news[0]?.spotlight?.artKey).toBe('rough-stop')
   })
 
@@ -258,5 +264,88 @@ describe('game core regressions', () => {
     expect(secondPawn.cash).toBe(447)
     expect(rebought.gear.switchblade).toBe(1)
     expect(rebought.cash).toBe(550)
+  })
+
+  it('creates a pending cop-stop decision when a rough-stop encounter fires', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const state = {
+      ...baseGame,
+      currentCityId: 'duluth',
+      cash: 0,
+      inventory: Object.fromEntries(
+        Object.keys(baseGame.inventory).map((drugId) => [drugId, 0]),
+      ) as typeof baseGame.inventory,
+    }
+
+    mockRandomSequence([], 0)
+    const next = travelToCity(state, 'lawrenceville')
+
+    expect(next.pendingEncounter).toMatchObject({
+      kind: 'cop-stop',
+      cityId: 'lawrenceville',
+      cityLabel: 'Lawrenceville',
+    })
+    expect(next.news[0]?.spotlight).toMatchObject({
+      title: DEFAULT_LOCALE.game.copStopTitle,
+      artKey: 'rough-stop',
+      decision: {
+        kind: 'cop-stop',
+        choices: ['flee', 'fight', 'surrender'],
+      },
+    })
+  })
+
+  it('resolves pending cop-stop choices through the core rules', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const encounterState = {
+      ...baseGame,
+      currentCityId: 'lawrenceville',
+      cash: 1_800,
+      health: 100,
+      pendingEncounter: {
+        kind: 'cop-stop' as const,
+        newsId: 42,
+        cityId: 'lawrenceville',
+        cityLabel: 'Lawrenceville',
+        cashDemand: 640,
+        baseDamage: 10,
+      },
+    }
+
+    const fled = resolvePendingEncounter(encounterState, 'flee')
+    const surrendered = resolvePendingEncounter(encounterState, 'surrender')
+
+    mockRandomSequence([], 0)
+    const wonFight = resolvePendingEncounter(
+      {
+        ...encounterState,
+        gear: {
+          ...encounterState.gear,
+          'snub-nose': 1,
+          'kevlar-vest': 1,
+        },
+      },
+      'fight',
+    )
+    vi.restoreAllMocks()
+
+    mockRandomSequence([], 0.999)
+    const lostFight = resolvePendingEncounter(encounterState, 'fight')
+
+    expect(fled.pendingEncounter).toBeNull()
+    expect(fled.health).toBe(90)
+    expect(surrendered.cash).toBe(1_160)
+    expect(surrendered.health).toBe(100)
+    expect(wonFight.health).toBe(99)
+    expect(wonFight.cash).toBe(encounterState.cash)
+    expect(lostFight.health).toBe(84)
+    expect(lostFight.cash).toBe(1_480)
+    expect(lostFight.news[0]?.text).toBe(DEFAULT_LOCALE.game.lostCopFightNews(320, 16))
   })
 })
