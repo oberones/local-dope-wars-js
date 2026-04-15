@@ -105,8 +105,6 @@ Turn the current strong visual direction into a production-quality interface tha
 
 Tasks:
 
-- Replace placeholder geometric map art with custom illustrated artwork for the default Gwinnett map
-- Add district landmark illustrations or iconography
 - Replace generic chips and markers with custom iconography
 - Add textured panel treatments and asset-backed visual layers
 - Add more polished transitions for travel, special events, and end-of-run states
