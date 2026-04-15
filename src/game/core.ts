@@ -620,8 +620,30 @@ export function getMaxBorrowAmount(state: GameState) {
   return Math.max(GAME_CONFIG.maxDebt - state.debt, 0)
 }
 
+function getPawnCharge(amount: number) {
+  return Math.round(amount * GAME_CONFIG.pawnAdvanceFeeRate)
+}
+
 export function getMaxPawnAdvanceAmount(state: GameState) {
-  return Math.max(GAME_CONFIG.maxPawnDebt - state.pawnDebt, 0)
+  const remainingHeadroom = Math.max(GAME_CONFIG.maxPawnDebt - state.pawnDebt, 0)
+
+  if (remainingHeadroom <= 0) {
+    return 0
+  }
+
+  let maxPrincipal = Math.floor(
+    remainingHeadroom / GAME_CONFIG.pawnAdvanceFeeRate,
+  )
+
+  while (maxPrincipal > 0 && getPawnCharge(maxPrincipal) > remainingHeadroom) {
+    maxPrincipal -= 1
+  }
+
+  while (getPawnCharge(maxPrincipal + 1) <= remainingHeadroom) {
+    maxPrincipal += 1
+  }
+
+  return maxPrincipal
 }
 
 export function getMaxHealthRecoveryAmount(state: GameState) {
@@ -1187,7 +1209,19 @@ export function takePawnAdvance(state: GameState, amount: number) {
     })
   }
 
-  const pawnCharge = Math.round(amount * GAME_CONFIG.pawnAdvanceFeeRate)
+  const pawnCharge = getPawnCharge(amount)
+
+  if (state.pawnDebt + pawnCharge > GAME_CONFIG.maxPawnDebt) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.pawnTooHigh,
+        },
+      ],
+    })
+  }
+
   const nextState: GameState = {
     ...state,
     cash: state.cash + amount,

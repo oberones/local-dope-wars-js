@@ -295,6 +295,7 @@ export const EN_US_LOCALE = {
     noCashToStash: 'No cash available to stash right now.',
     noBankReserve: 'No bank reserve available to withdraw.',
     debtCleared: 'Debt is cleared.',
+    pawnDebtCleared: 'Pawn debt is cleared.',
     noCashForDebt: 'No cash available to pay debt.',
     noPawnRoom: 'No pawn room is left on this run.',
     noCashForPawn: 'No cash available to pay down pawn debt.',

@@ -154,4 +154,21 @@ describe('game core regressions', () => {
     expect(repaid.cash).toBe(2_500)
     expect(repaid.pawnDebt).toBe(850)
   })
+
+  it('rejects pawn advances when the fee would push pawn debt past the ceiling', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const nearLimit = {
+      ...baseGame,
+      pawnDebt: GAME_CONFIG.maxPawnDebt - 1,
+    }
+
+    const rejected = takePawnAdvance(nearLimit, 2)
+
+    expect(rejected.cash).toBe(nearLimit.cash)
+    expect(rejected.pawnDebt).toBe(nearLimit.pawnDebt)
+    expect(rejected.news[0]?.text).toBe(DEFAULT_LOCALE.game.pawnTooHigh)
+  })
 })
