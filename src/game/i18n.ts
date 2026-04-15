@@ -255,10 +255,20 @@ export const EN_US_LOCALE = {
     emptyStash: 'Empty stash',
     emptyInventoryBoard: 'No inventory yet, so the board is clean.',
     inventoryLeaderMeta: 'Largest stack currently in inventory.',
-    financeEyebrow: 'Finance desk',
-    financeHeading: 'Bank and debt',
-    financeSummary:
-      'Move cash, protect winnings, and decide how hard to lean on the loan ceiling.',
+    businessEyebrow: 'Night economy',
+    businessHeading: 'Pick your lane',
+    businessSummary:
+      'Work the black market, the bank, or the pawn shop without crowding the whole board.',
+    businessTabsLabel: 'Business lanes',
+    blackMarketTab: 'Black market',
+    bankTab: 'Bank',
+    pawnShopTab: 'Pawn shop',
+    blackMarketSummary:
+      'Trade product, read the pulse, and move only what this city is showing tonight.',
+    bankSummary:
+      'Move cash, service debt, and keep one eye on the collectors before you travel.',
+    pawnShopSummary:
+      'Patch up, work the pawn line, and stock gear for the next rough stop.',
     gearEyebrow: 'Street gear',
     gearHeading: 'Weapons and defense',
     gearSummary:
