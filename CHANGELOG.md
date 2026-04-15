@@ -1,3 +1,9 @@
+## 0.5.0 (2026-04-14)
+
+### Feat
+
+- add pawnable defensive gear
+
 ## 0.4.0 (2026-04-14)
 
 ### Feat
