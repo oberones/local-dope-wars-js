@@ -55,6 +55,7 @@ function makeHighScore(overrides: Partial<HighScoreEntry> = {}): HighScoreEntry 
     bankDeposit: 1_500,
     health: 92,
     inventoryValue: 2_800,
+    gearValue: 0,
     stashUsed: 12,
     totalSpace: 100,
     score: 5_800,
@@ -121,10 +122,11 @@ describe('storage regressions', () => {
     expect(loadSelectedContentPackId()).toBe('atlanta-intown')
   })
 
-  it('normalizes older saves that predate pawn debt support', () => {
+  it('normalizes older saves that predate pawn debt and gear support', () => {
     const game = createNewGame('gwinnett-county')
-    const legacyGame = { ...game } as GameState & { pawnDebt?: number }
+    const legacyGame = { ...game } as GameState & { pawnDebt?: number; gear?: GameState['gear'] }
     delete legacyGame.pawnDebt
+    delete legacyGame.gear
 
     localStorageMock.setItem(
       SAVE_KEY,
@@ -137,6 +139,9 @@ describe('storage regressions', () => {
     expect(loadSavedGame()).toEqual({
       ...legacyGame,
       pawnDebt: 0,
+      gear: Object.fromEntries(
+        Object.keys(game.gear).map((gearId) => [gearId, 0]),
+      ),
     })
   })
 
@@ -149,6 +154,7 @@ describe('storage regressions', () => {
       }),
     }
     delete (bestLegacyEntry as { pawnDebt?: number }).pawnDebt
+    delete (bestLegacyEntry as { gearValue?: number }).gearValue
 
     localStorageMock.setItem(
       HIGH_SCORES_KEY,
@@ -157,6 +163,7 @@ describe('storage regressions', () => {
           runId: 'solid-run',
           score: 9_000,
           pawnDebt: 400,
+          gearValue: 650,
           recordedAt: '2026-04-15T00:00:00.000Z',
         }),
         bestLegacyEntry,
@@ -173,11 +180,13 @@ describe('storage regressions', () => {
       {
         ...bestLegacyEntry,
         pawnDebt: 0,
+        gearValue: 0,
       },
       makeHighScore({
         runId: 'solid-run',
         score: 9_000,
         pawnDebt: 400,
+        gearValue: 650,
         recordedAt: '2026-04-15T00:00:00.000Z',
       }),
     ])
