@@ -55,21 +55,23 @@ describe('app browser flows', () => {
     expect(
       await screen.findByRole('tab', { name: 'Black market', selected: true }),
     ).toBeTruthy()
-    const marketPanel = screen.getByRole('tabpanel')
+    const marketPanel = await screen.findByRole('tabpanel', { name: 'Black market' })
     expect(within(marketPanel).getAllByRole('button', { name: 'Buy' }).length).toBeGreaterThan(0)
     expect(within(marketPanel).queryByRole('button', { name: 'Deposit' })).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Bank' }))
 
-    expect(screen.getByRole('tab', { name: 'Bank', selected: true })).toBeTruthy()
-    const bankPanel = screen.getByRole('tabpanel')
+    expect(await screen.findByRole('tab', { name: 'Bank', selected: true })).toBeTruthy()
+    const bankPanel = await screen.findByRole('tabpanel', { name: 'Bank' })
     expect(within(bankPanel).getByRole('button', { name: 'Deposit' })).toBeTruthy()
     expect(within(bankPanel).queryByRole('button', { name: 'Patch up' })).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Pawn shop' }))
 
-    expect(screen.getByRole('tab', { name: 'Pawn shop', selected: true })).toBeTruthy()
-    const pawnPanel = screen.getByRole('tabpanel')
+    expect(
+      await screen.findByRole('tab', { name: 'Pawn shop', selected: true }),
+    ).toBeTruthy()
+    const pawnPanel = await screen.findByRole('tabpanel', { name: 'Pawn shop' })
     expect(within(pawnPanel).getByText('Patch up')).toBeTruthy()
     expect(within(pawnPanel).queryByRole('button', { name: 'Borrow' })).toBeNull()
   })
