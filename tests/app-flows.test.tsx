@@ -122,4 +122,71 @@ describe('app browser flows', () => {
       expect(screen.queryByRole('dialog')).toBeNull()
     })
   })
+
+  it('forces a cop-stop decision before closing the encounter popup', async () => {
+    const savedGame = {
+      ...createNewGame('gwinnett-county'),
+      currentCityId: 'lawrenceville' as const,
+      cash: 1_800,
+      newsCursor: 0,
+      pendingEncounter: {
+        kind: 'cop-stop' as const,
+        newsId: 1,
+        cityId: 'lawrenceville' as const,
+        cityLabel: 'Lawrenceville',
+        cashDemand: 640,
+        baseDamage: 10,
+      },
+      news: [
+        {
+          id: 1,
+          tone: 'encounter' as const,
+          text: 'Blue lights hit behind you near Lawrenceville. Decide fast.',
+          spotlight: {
+            tone: 'encounter' as const,
+            title: 'Cop stop',
+            detail:
+              'A patrol car pins you down near Lawrenceville. You can floor it, fight back, or hand over up to $640 to cool it off.',
+            artKey: 'rough-stop' as const,
+            artLabel: 'Rough stop',
+            decision: {
+              kind: 'cop-stop' as const,
+              choices: ['flee', 'fight', 'surrender'] as const,
+            },
+          },
+        },
+      ],
+    }
+
+    saveGame(savedGame)
+
+    const { user } = renderApp()
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Continue saved run',
+      }),
+    )
+
+    const fleeButton = await screen.findByRole('button', {
+      name: 'Floor it',
+    })
+
+    expect(await screen.findByRole('dialog')).toBeTruthy()
+    expect(document.activeElement).toBe(fleeButton)
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Pay up' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    expect(
+      screen.getByText('You paid $640 to settle the stop and keep breathing room.'),
+    ).toBeTruthy()
+  })
 })

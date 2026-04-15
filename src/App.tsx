@@ -36,6 +36,7 @@ import {
   payDebt,
   pawnGear,
   recoverHealth,
+  resolvePendingEncounter,
   sellDrug,
   takePawnAdvance,
   travelToCity,
@@ -55,6 +56,7 @@ import type {
   ContentPackDefinition,
   ContentPackId,
   DrugId,
+  EncounterChoiceId,
   EventSpotlight,
   GameState,
   HighScoreEntry,
@@ -307,6 +309,14 @@ function App() {
         newsId: activeSpotlightNews.id,
       }
     : null
+  const activePendingEncounter =
+    activeSpotlight &&
+    game?.pendingEncounter &&
+    game.pendingEncounter.newsId === activeSpotlight.newsId
+      ? game.pendingEncounter
+      : null
+  const requiresSpotlightDecision =
+    activeSpotlight?.decision?.kind === 'cop-stop' && Boolean(activePendingEncounter)
 
   useEffect(() => {
     if (!activeSpotlightNews) {
@@ -322,6 +332,11 @@ function App() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (requiresSpotlightDecision) {
+          event.preventDefault()
+          return
+        }
+
         event.preventDefault()
         setSeenSpotlightNewsId(activeSpotlightNews.id)
         return
@@ -360,7 +375,7 @@ function App() {
       document.removeEventListener('keydown', handleKeyDown)
       previousFocusedElement?.focus()
     }
-  }, [activeSpotlightNews])
+  }, [activeSpotlightNews, requiresSpotlightDecision])
 
   function setDraft(drugId: DrugId, nextValue: string) {
     setTradeDrafts((current) => ({
@@ -834,10 +849,19 @@ function App() {
       : locale.hints.noCashForPawn,
   )
   const dismissSpotlight = () => {
-    if (!activeSpotlight) {
+    if (!activeSpotlight || requiresSpotlightDecision) {
       return
     }
 
+    setSeenSpotlightNewsId(activeSpotlight.newsId)
+  }
+
+  function resolveSpotlightDecision(choice: EncounterChoiceId) {
+    if (!activeSpotlight || !requiresSpotlightDecision) {
+      return
+    }
+
+    setGame((current) => (current ? resolvePendingEncounter(current, choice) : current))
     setSeenSpotlightNewsId(activeSpotlight.newsId)
   }
 
@@ -848,7 +872,7 @@ function App() {
           className="event-modal-backdrop"
           role="presentation"
           onClick={(event) => {
-            if (event.target === event.currentTarget) {
+            if (event.target === event.currentTarget && !requiresSpotlightDecision) {
               dismissSpotlight()
             }
           }}
@@ -885,13 +909,37 @@ function App() {
               </p>
             </div>
             <div className="event-modal__actions">
-              <button
-                ref={spotlightDismissRef}
-                className="accent-button"
-                onClick={dismissSpotlight}
-              >
-                {locale.run.spotlightDismiss}
-              </button>
+              {requiresSpotlightDecision ? (
+                <>
+                  <button
+                    ref={spotlightDismissRef}
+                    className="ghost-button"
+                    onClick={() => resolveSpotlightDecision('flee')}
+                  >
+                    {locale.run.spotlightFlee}
+                  </button>
+                  <button
+                    className="ghost-button"
+                    onClick={() => resolveSpotlightDecision('surrender')}
+                  >
+                    {locale.run.spotlightSurrender}
+                  </button>
+                  <button
+                    className="accent-button"
+                    onClick={() => resolveSpotlightDecision('fight')}
+                  >
+                    {locale.run.spotlightFight}
+                  </button>
+                </>
+              ) : (
+                <button
+                  ref={spotlightDismissRef}
+                  className="accent-button"
+                  onClick={dismissSpotlight}
+                >
+                  {locale.run.spotlightDismiss}
+                </button>
+              )}
             </div>
           </section>
         </div>

@@ -1,14 +1,15 @@
 import { GEAR_ITEMS, getContentPack, hasContentPack } from './content'
-import type { ContentPackId, GameState, HighScoreEntry } from './types'
+import type { ContentPackId, GameState, HighScoreEntry, PendingEncounter } from './types'
 
 const SAVE_KEY = 'local-dope-wars.active-run.v1'
 const HIGH_SCORES_KEY = 'local-dope-wars.high-scores.v1'
 const SELECTED_PACK_KEY = 'local-dope-wars.selected-pack.v1'
 const MAX_HIGH_SCORES = 10
 
-type StoredGameState = Omit<GameState, 'pawnDebt' | 'gear'> & {
+type StoredGameState = Omit<GameState, 'pawnDebt' | 'gear' | 'pendingEncounter'> & {
   pawnDebt?: number
   gear?: GameState['gear']
+  pendingEncounter?: PendingEncounter | null
 }
 
 type StoredHighScoreEntry = Omit<HighScoreEntry, 'pawnDebt' | 'gearValue'> & {
@@ -74,6 +75,23 @@ function isMarketRecord(value: unknown, drugIds: string[]) {
   })
 }
 
+function isPendingEncounter(value: unknown, cityIds: string[]): value is PendingEncounter | null {
+  if (value === null || typeof value === 'undefined') {
+    return true
+  }
+
+  return (
+    isRecord(value) &&
+    value.kind === 'cop-stop' &&
+    typeof value.newsId === 'number' &&
+    typeof value.cityId === 'string' &&
+    cityIds.includes(value.cityId) &&
+    typeof value.cityLabel === 'string' &&
+    typeof value.cashDemand === 'number' &&
+    typeof value.baseDamage === 'number'
+  )
+}
+
 function isStoredGameState(value: unknown): value is StoredGameState {
   if (
     !isRecord(value) ||
@@ -108,6 +126,7 @@ function isStoredGameState(value: unknown): value is StoredGameState {
     Array.isArray(value.news) &&
     value.news.every(isNewsItem) &&
     typeof value.newsCursor === 'number' &&
+    isPendingEncounter(value.pendingEncounter, cityIds) &&
     Array.isArray(value.activity) &&
     value.activity.every(isActivityItem) &&
     typeof value.activityCursor === 'number'
@@ -152,6 +171,7 @@ function normalizeGameState(game: StoredGameState): GameState {
       ...defaultGear,
       ...(game.gear ?? {}),
     },
+    pendingEncounter: game.pendingEncounter ?? null,
   }
 }
 
