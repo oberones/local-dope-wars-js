@@ -3,6 +3,7 @@ import type {
   ContentPackDefinition,
   ContentPackId,
   DrugDefinition,
+  GearItemDefinition,
   ScoreTier,
 } from './types'
 
@@ -41,6 +42,7 @@ export const GAME_CONFIG = {
   travelEncounterDamageHeatDivisor: 5,
   healthRecoveryCostPerPoint: 85,
   maxHealthRecoveryPerVisit: 24,
+  defenseMitigationRate: 0.75,
   debtCollectionThreshold: 12000,
   debtCollectionBaseChance: 0.08,
   debtCollectionDebtChanceDivisor: 50000,
@@ -55,6 +57,57 @@ export const GAME_CONFIG = {
   activityLimit: 16,
   maxDebt: 20000,
 } as const
+
+export const GEAR_ITEMS: GearItemDefinition[] = [
+  {
+    id: 'switchblade',
+    label: 'Switchblade',
+    flavor: 'Pocket insurance for tense handoffs',
+    accent: '#f97316',
+    category: 'weapon',
+    cost: 450,
+    defense: 2,
+    maxOwned: 2,
+    pawnBaseValue: 260,
+    pawnDecayRate: 0.72,
+  },
+  {
+    id: 'snub-nose',
+    label: 'Snub-nose',
+    flavor: 'Cheap hand cannon with just enough pull',
+    accent: '#f4c95d',
+    category: 'weapon',
+    cost: 2200,
+    defense: 5,
+    maxOwned: 2,
+    pawnBaseValue: 1350,
+    pawnDecayRate: 0.68,
+  },
+  {
+    id: 'kevlar-vest',
+    label: 'Kevlar vest',
+    flavor: 'Sweaty armor that keeps bad nights survivable',
+    accent: '#38bdf8',
+    category: 'armor',
+    cost: 1800,
+    defense: 4,
+    maxOwned: 1,
+    pawnBaseValue: 950,
+    pawnDecayRate: 0.6,
+  },
+  {
+    id: 'pump-shotgun',
+    label: 'Pump shotgun',
+    flavor: 'Heavy deterrent for routes that go loud',
+    accent: '#ef4444',
+    category: 'weapon',
+    cost: 4600,
+    defense: 9,
+    maxOwned: 1,
+    pawnBaseValue: 2550,
+    pawnDecayRate: 0.55,
+  },
+] as const
 
 function cloneDrugDefinitions(drugs: DrugDefinition[]) {
   return drugs.map((drug) => ({

@@ -1,24 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
-import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GAME_CONFIG, getContentPack } from './game/content'
+import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GEAR_ITEMS, GAME_CONFIG, getContentPack } from './game/content'
 import { DEFAULT_LOCALE } from './game/i18n'
 import { MapScene } from './components/MapScene'
 import {
   borrowMoney,
+  buyGear,
   buildRunSummary,
   buyDrug,
   createNewGame,
   depositCash,
   getCurrentCity,
   getDailyBankYield,
+  getDefenseRating,
   getDebtCollectionChance,
+  getGearValue,
   getMaxBorrowAmount,
   getMaxBuyQuantity,
   getMaxDebtPayment,
   getMaxDepositAmount,
+  getMaxGearBuyQuantity,
+  getMaxGearPawnQuantity,
   getHealthRecoveryCost,
   getMaxHealthRecoveryAmount,
+  getNextGearPawnOffer,
   getMaxPawnAdvanceAmount,
   getMaxPawnRepayment,
   getMaxSellQuantity,
@@ -28,6 +34,7 @@ import {
   isRunOver,
   payPawnDebt,
   payDebt,
+  pawnGear,
   recoverHealth,
   sellDrug,
   takePawnAdvance,
@@ -650,6 +657,10 @@ function App() {
               <p>{locale.formatMoney(lastSummary.inventoryValue)}</p>
             </article>
             <article className="summary-stat">
+              <p className="meta-label">{locale.summary.gearValueLabel}</p>
+              <p>{locale.formatMoney(lastSummary.gearValue)}</p>
+            </article>
+            <article className="summary-stat">
               <p className="meta-label">{locale.summary.debtLabel}</p>
               <p>{locale.formatMoney(lastSummary.debt)}</p>
             </article>
@@ -713,6 +724,8 @@ function App() {
   const focusedCity = getCityById(focusedCityId, cities)
   const usedSpace = getUsedSpace(game)
   const runValue = getNetWorth(game)
+  const defenseRating = getDefenseRating(game)
+  const gearValue = getGearValue(game)
   const runClosed = isRunOver(game)
   const travelLockedByHealth = game.health <= 0
   const travelDisabled = runClosed || travelLockedByHealth
@@ -974,6 +987,10 @@ function App() {
           <p className="stat-card__value">{game.health}%</p>
         </article>
         <article className="panel stat-card">
+          <p className="meta-label">{locale.run.defenseRating}</p>
+          <p className="stat-card__value">{defenseRating}</p>
+        </article>
+        <article className="panel stat-card">
           <p className="meta-label">{locale.run.bankReserve}</p>
           <p className="stat-card__value">{locale.formatMoney(game.bankDeposit)}</p>
         </article>
@@ -1083,8 +1100,16 @@ function App() {
               <p>{locale.formatMoney(game.pawnDebt)}</p>
             </div>
             <div className="finance-summary-card">
+              <p className="meta-label">{locale.run.defenseRating}</p>
+              <p>{defenseRating}</p>
+            </div>
+            <div className="finance-summary-card">
               <p className="meta-label">{locale.run.creditRemaining}</p>
               <p>{locale.formatMoney(maxBorrow)}</p>
+            </div>
+            <div className="finance-summary-card">
+              <p className="meta-label">{locale.summary.gearValueLabel}</p>
+              <p>{locale.formatMoney(gearValue)}</p>
             </div>
             <div className="finance-summary-card">
               <p className="meta-label">{locale.run.pawnHeadroom}</p>
@@ -1328,6 +1353,85 @@ function App() {
                   : locale.hints.noCollectorRisk}
               </p>
             </label>
+          </div>
+
+          <div className="gear-rack">
+            <div className="panel__header">
+              <div>
+                <p className="eyebrow">{locale.run.gearEyebrow}</p>
+                <h3>{locale.run.gearHeading}</h3>
+              </div>
+              <p className="news-panel__summary">{locale.run.gearSummary}</p>
+            </div>
+
+            <div className="gear-rack__grid">
+              {GEAR_ITEMS.map((item) => {
+                const owned = game.gear[item.id]
+                const maxBuy = getMaxGearBuyQuantity(game, item.id)
+                const maxPawn = getMaxGearPawnQuantity(game, item.id)
+                const nextPawnOffer = getNextGearPawnOffer(game, item.id)
+
+                return (
+                  <article
+                    key={item.id}
+                    className="gear-card"
+                    style={
+                      {
+                        '--gear-accent': item.accent,
+                        '--gear-glow': `${item.accent}33`,
+                      } as CSSProperties
+                    }
+                  >
+                    <div className="gear-card__top">
+                      <div>
+                        <p className="gear-card__kicker">{item.flavor}</p>
+                        <h3>{item.label}</h3>
+                      </div>
+                      <span className="gear-card__category">{item.category}</span>
+                    </div>
+
+                    <div className="gear-card__stats">
+                      <span>{locale.run.gearOwned(owned)}</span>
+                      <span>{locale.run.gearDefense(item.defense)}</span>
+                    </div>
+
+                    <p className="gear-card__price">
+                      {locale.formatMoney(item.cost)}
+                    </p>
+                    <p className="gear-card__hint">
+                      {maxPawn > 0
+                        ? locale.run.gearPawnOffer(nextPawnOffer)
+                        : locale.hints.noGearToPawn}
+                    </p>
+
+                    <div className="gear-card__actions">
+                      <button
+                        className="ghost-button"
+                        disabled={maxBuy <= 0}
+                        onClick={() =>
+                          setGame((current) =>
+                            current ? buyGear(current, item.id) : current,
+                          )
+                        }
+                      >
+                        {locale.run.gearBuyButton}
+                      </button>
+                      <button
+                        className="accent-button accent-button--secondary"
+                        disabled={maxPawn <= 0}
+                        onClick={() =>
+                          setGame((current) =>
+                            current ? pawnGear(current, item.id) : current,
+                          )
+                        }
+                      >
+                        {locale.run.gearPawnButton}
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
           </div>
         </article>
 

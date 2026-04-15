@@ -189,6 +189,7 @@ export const EN_US_LOCALE = {
     cashLabel: 'Cash',
     bankLabel: 'Bank',
     inventoryValueLabel: 'Inventory value',
+    gearValueLabel: 'Gear value',
     debtLabel: 'Debt',
     pawnLabel: 'Pawn debt',
     backToLaunchBoard: 'Back to launch board',
@@ -221,6 +222,7 @@ export const EN_US_LOCALE = {
     health: 'Health',
     bankReserve: 'Bank reserve',
     debtPressure: 'Debt pressure',
+    defenseRating: 'Defense rating',
     stashSpace: 'Stash space',
     runValue: 'Run value',
     cheapestLane: 'Cheapest lane',
@@ -242,6 +244,15 @@ export const EN_US_LOCALE = {
     financeHeading: 'Bank and debt',
     financeSummary:
       'Move cash, protect winnings, and decide how hard to lean on the loan ceiling.',
+    gearEyebrow: 'Street gear',
+    gearHeading: 'Weapons and defense',
+    gearSummary:
+      'Arm up for rough nights, then pawn duplicate hardware when cash gets tight.',
+    gearOwned: (quantity: number) => `Owned ${quantity}`,
+    gearDefense: (defense: number) => `Defense +${defense}`,
+    gearBuyButton: 'Buy 1',
+    gearPawnButton: 'Pawn 1',
+    gearPawnOffer: (amount: number) => `Next pawn offer ${formatMoney(amount)}`,
     streetMedicLabel: 'Street medic',
     streetMedicButton: 'Patch up',
     streetMedicReady: (health: number, cost: number) =>
@@ -317,6 +328,8 @@ export const EN_US_LOCALE = {
     noBankReserve: 'No bank reserve available to withdraw.',
     debtCleared: 'Debt is cleared.',
     pawnDebtCleared: 'Pawn debt is cleared.',
+    gearRackFull: 'You are already carrying the maximum loadout.',
+    noGearToPawn: 'No gear on hand to pawn right now.',
     noCashForDebt: 'No cash available to pay debt.',
     noPawnRoom: 'No pawn room is left on this run.',
     noCashForPawn: 'No cash available to pay down pawn debt.',
@@ -484,6 +497,26 @@ export const EN_US_LOCALE = {
     recoveredHealthTitle: (health: number) => `Patched up ${health} health`,
     recoveredHealthDetail: (health: number) =>
       `Condition improved to ${health}% before the next move.`,
+    gearQuantityRequired: 'Set a gear quantity higher than zero.',
+    gearCarryLimit: (gearLabel: string) =>
+      `You are already carrying the maximum number of ${gearLabel}.`,
+    gearTooExpensive: (gearLabel: string) =>
+      `You do not have the cash to pick up ${gearLabel} right now.`,
+    boughtGearNews: (quantity: number, gearLabel: string, total: number) =>
+      `Picked up ${quantity} ${gearLabel} for ${formatMoney(total)}.`,
+    boughtGearTitle: (quantity: number, gearLabel: string) =>
+      `Bought ${quantity} ${gearLabel}`,
+    boughtGearDetail: (defense: number) =>
+      `Defense rating now sits at ${defense}.`,
+    gearPawnQuantityRequired: 'Set a pawn quantity higher than zero.',
+    noGearToPawn: (gearLabel: string) =>
+      `There is no ${gearLabel} left to pawn off.`,
+    pawnedGearNews: (quantity: number, gearLabel: string, proceeds: number) =>
+      `Pawned ${quantity} ${gearLabel} for ${formatMoney(proceeds)} in fast cash.`,
+    pawnedGearTitle: (quantity: number, gearLabel: string) =>
+      `Pawned ${quantity} ${gearLabel}`,
+    pawnedGearDetail: (cash: number, defense: number) =>
+      `Cash rose to ${formatMoney(cash)} while defense settled at ${defense}.`,
   },
 }
 

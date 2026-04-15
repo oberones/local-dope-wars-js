@@ -1,4 +1,4 @@
-import { getContentPack, hasContentPack } from './content'
+import { GEAR_ITEMS, getContentPack, hasContentPack } from './content'
 import type { ContentPackId, GameState, HighScoreEntry } from './types'
 
 const SAVE_KEY = 'local-dope-wars.active-run.v1'
@@ -6,12 +6,14 @@ const HIGH_SCORES_KEY = 'local-dope-wars.high-scores.v1'
 const SELECTED_PACK_KEY = 'local-dope-wars.selected-pack.v1'
 const MAX_HIGH_SCORES = 10
 
-type StoredGameState = Omit<GameState, 'pawnDebt'> & {
+type StoredGameState = Omit<GameState, 'pawnDebt' | 'gear'> & {
   pawnDebt?: number
+  gear?: GameState['gear']
 }
 
-type StoredHighScoreEntry = Omit<HighScoreEntry, 'pawnDebt'> & {
+type StoredHighScoreEntry = Omit<HighScoreEntry, 'pawnDebt' | 'gearValue'> & {
   pawnDebt?: number
+  gearValue?: number
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -46,6 +48,14 @@ function isInventoryRecord(value: unknown, drugIds: string[]) {
   return drugIds.every((drugId) => typeof value[drugId] === 'number')
 }
 
+function isGearRecord(value: unknown, gearIds: string[]) {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return gearIds.every((gearId) => typeof value[gearId] === 'number')
+}
+
 function isMarketRecord(value: unknown, drugIds: string[]) {
   if (!isRecord(value)) {
     return false
@@ -76,6 +86,7 @@ function isStoredGameState(value: unknown): value is StoredGameState {
   const content = getContentPack(value.contentPackId)
   const drugIds = content.drugs.map((drug) => drug.id)
   const cityIds = content.cities.map((city) => city.id)
+  const gearIds = GEAR_ITEMS.map((item) => item.id)
 
   return (
     typeof value.runId === 'string' &&
@@ -92,6 +103,7 @@ function isStoredGameState(value: unknown): value is StoredGameState {
     typeof value.currentCityId === 'string' &&
     cityIds.includes(value.currentCityId) &&
     isInventoryRecord(value.inventory, drugIds) &&
+    (typeof value.gear === 'undefined' || isGearRecord(value.gear, gearIds)) &&
     isMarketRecord(value.market, drugIds) &&
     Array.isArray(value.news) &&
     value.news.every(isNewsItem) &&
@@ -119,6 +131,7 @@ function isStoredHighScoreEntry(value: unknown): value is StoredHighScoreEntry {
     typeof value.bankDeposit === 'number' &&
     typeof value.health === 'number' &&
     typeof value.inventoryValue === 'number' &&
+    (typeof value.gearValue === 'number' || typeof value.gearValue === 'undefined') &&
     typeof value.stashUsed === 'number' &&
     typeof value.totalSpace === 'number' &&
     typeof value.score === 'number' &&
@@ -128,9 +141,17 @@ function isStoredHighScoreEntry(value: unknown): value is StoredHighScoreEntry {
 }
 
 function normalizeGameState(game: StoredGameState): GameState {
+  const defaultGear = Object.fromEntries(
+    GEAR_ITEMS.map((item) => [item.id, 0]),
+  ) as GameState['gear']
+
   return {
     ...game,
     pawnDebt: game.pawnDebt ?? 0,
+    gear: {
+      ...defaultGear,
+      ...(game.gear ?? {}),
+    },
   }
 }
 
@@ -138,6 +159,7 @@ function normalizeHighScore(entry: StoredHighScoreEntry): HighScoreEntry {
   return {
     ...entry,
     pawnDebt: entry.pawnDebt ?? 0,
+    gearValue: entry.gearValue ?? 0,
   }
 }
 
