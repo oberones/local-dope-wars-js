@@ -15,6 +15,7 @@ Completed:
 - Local save/load, high scores, and run summary flow
 - Finance layer with bank actions, debt pressure, bank yield, and emergency pawn advances
 - Typed market event tables and heat/health encounter systems
+- Text-first event spotlight popups for market shocks, collectors, and travel encounters
 - Basic automated regression coverage plus lint/test/build verification flow
 - The current built-in content pack still defaults to the original Gwinnett County setting
 
@@ -68,6 +69,7 @@ Tasks:
 - Add weapons/guns or defensive inventory if that remains part of the design
 - Add debt pressure and richer bank/pawn mechanics
 - Add event tables for raids, shortages, floods, busts, and lucky breaks
+- Add a typed popup/modal presentation layer for encounters and special market events
 - Add more explicit difficulty tuning hooks in `src/game/content.ts`
 
 Definition of done:
@@ -108,6 +110,7 @@ Tasks:
 - Replace generic chips and markers with custom iconography
 - Add textured panel treatments and asset-backed visual layers
 - Add more polished transitions for travel, special events, and end-of-run states
+- Replace text-first event spotlight windows with illustrated encounter/event cards
 - Introduce drug/item icon systems
 - Add stronger mobile-specific UI refinement where necessary
 - Keep the map/art pipeline modular enough that future location packs can supply their own scene assets

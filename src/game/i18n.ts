@@ -1,4 +1,10 @@
-import type { ActivityKind, LocaleId, MarketEventKind, MarketModifier } from './types'
+import type {
+  ActivityKind,
+  EventSpotlightTone,
+  LocaleId,
+  MarketEventKind,
+  MarketModifier,
+} from './types'
 
 const moneyFormatter = new Intl.NumberFormat('en-US')
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -87,6 +93,18 @@ function formatMarketEventKind(kind: MarketEventKind) {
     default:
       return assertNever(kind)
   }
+}
+
+function formatSpotlightTone(tone: EventSpotlightTone) {
+  if (tone === 'market') {
+    return 'Market event'
+  }
+
+  if (tone === 'alert') {
+    return 'Pressure window'
+  }
+
+  return 'Encounter'
 }
 
 function formatHeatLabel(cops: number) {
@@ -238,6 +256,9 @@ export const EN_US_LOCALE = {
     creditRemaining: 'Credit remaining',
     nextBankYield: 'Next bank yield',
     collectorRisk: 'Collector risk',
+    spotlightDismiss: 'Keep moving',
+    spotlightQueue: (count: number) =>
+      count > 1 ? `${count} event windows queued` : 'Event window',
     depositLabel: 'Deposit to bank',
     depositButton: 'Deposit',
     withdrawLabel: 'Withdraw from bank',
@@ -310,6 +331,13 @@ export const EN_US_LOCALE = {
       `You only hold ${maxSell} units right now.`,
     buySellRange: (maxBuy: number, maxSell: number) =>
       `Buy up to ${maxBuy}. Sell up to ${maxSell}.`,
+  },
+  spotlight: {
+    toneLabel: (tone: EventSpotlightTone) => formatSpotlightTone(tone),
+    marketEventTitle: (drugLabel: string, kind: MarketEventKind) =>
+      `${formatMarketEventKind(kind)} on ${drugLabel}`,
+    marketEventDetail: (cityLabel: string, headline: string) =>
+      `${headline} ${cityLabel} is feeling the shift right now.`,
   },
   map: {
     focus: (cityLabel: string) => `Focus: ${cityLabel}`,
