@@ -42,9 +42,16 @@ describe('game core regressions', () => {
     mockRandomSequence([], 0)
 
     const game = createNewGame('gwinnett-county')
+    const spotlightBulletin = game.news.find((item) => item.tone === 'market' && item.spotlight)
 
     expect(Object.values(game.market).some((offer) => offer.event)).toBe(true)
     expect(game.news.some((item) => item.tone === 'market')).toBe(true)
+    expect(spotlightBulletin?.spotlight).toMatchObject({
+      tone: 'market',
+    })
+    expect(spotlightBulletin?.spotlight?.title).toEqual(expect.any(String))
+    expect(spotlightBulletin?.spotlight?.detail).toEqual(expect.any(String))
+    expect(spotlightBulletin?.spotlight?.artKey).toMatch(/^market-/)
   })
 
   it('applies daily bank yield and debt growth when traveling', () => {
@@ -97,11 +104,21 @@ describe('game core regressions', () => {
 
     mockRandomSequence([], 0)
     const next = travelToCity(state, 'duluth')
+    const collectionNews = next.news.find(
+      (item) => item.spotlight?.artKey === 'collector',
+    )
 
     expect(next.bankDeposit).toBeLessThan(state.bankDeposit + getDailyBankYield(state))
     expect(
       next.activity.some((item) => item.title === DEFAULT_LOCALE.game.debtCollectionTitle),
     ).toBe(true)
+    expect(next.news.some((item) => item.spotlight?.artKey === 'collector')).toBe(true)
+    expect(collectionNews?.spotlight).toMatchObject({
+      tone: 'alert',
+      title: DEFAULT_LOCALE.game.debtCollectionTitle,
+      artKey: 'collector',
+      artLabel: 'Collectors',
+    })
   })
 
   it('blocks travel when the player is too hurt to move', () => {

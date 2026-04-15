@@ -10,6 +10,7 @@ import type {
   ContentPackId,
   DrugDefinition,
   DrugId,
+  EventSpotlight,
   GameState,
   MarketEventDefinition,
   MarketOffer,
@@ -69,7 +70,7 @@ function createMarketRecord(drugIds: DrugId[]) {
 
 function applyNews(
   state: GameState,
-  entries: Array<{ tone: NewsTone; text: string }>,
+  entries: Array<{ tone: NewsTone; text: string; spotlight?: EventSpotlight }>,
 ) {
   if (entries.length === 0) {
     return state
@@ -114,7 +115,7 @@ function applyActivity(
 function applyUpdates(
   state: GameState,
   updates: {
-    news?: Array<{ tone: NewsTone; text: string }>
+    news?: Array<{ tone: NewsTone; text: string; spotlight?: EventSpotlight }>
     activity?: Array<Omit<ActivityItem, 'id'>>
   },
 ) {
@@ -172,6 +173,31 @@ function selectDrugMarketEvent(drug: DrugDefinition) {
   return undefined
 }
 
+function getMarketEventSpotlight(event: MarketEventDefinition, drug: DrugDefinition, cityLabel: string) {
+  const artKeyByKind: Record<MarketEventDefinition['kind'], EventSpotlight['artKey']> = {
+    flood: 'market-flood',
+    shortage: 'market-shortage',
+    raid: 'market-raid',
+    bust: 'market-bust',
+    'lucky-break': 'market-lucky-break',
+  }
+  const artLabelByKind: Record<MarketEventDefinition['kind'], string> = {
+    flood: `${drug.label} flood`,
+    shortage: `${drug.label} shortage`,
+    raid: `${drug.label} raid`,
+    bust: `${drug.label} bust`,
+    'lucky-break': `${drug.label} break`,
+  }
+
+  return {
+    tone: 'market',
+    title: locale.spotlight.marketEventTitle(drug.label, event.kind),
+    detail: locale.spotlight.marketEventDetail(cityLabel, event.headline),
+    artKey: artKeyByKind[event.kind],
+    artLabel: artLabelByKind[event.kind],
+  } satisfies EventSpotlight
+}
+
 function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) {
   const content = getContentPack(contentPackId)
   const city = content.citiesById[cityId] ?? content.cities[0]
@@ -183,7 +209,7 @@ function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) 
   const activeIds = new Set(
     shuffle(content.drugs.map((drug) => drug.id)).slice(0, availableCount),
   )
-  const bulletins: Array<{ tone: NewsTone; text: string }> = []
+  const bulletins: Array<{ tone: NewsTone; text: string; spotlight?: EventSpotlight }> = []
 
   for (const drug of content.drugs) {
     if (!activeIds.has(drug.id)) {
@@ -219,6 +245,7 @@ function buildMarket(contentPackId: GameState['contentPackId'], cityId: CityId) 
       bulletins.push({
         tone: 'market',
         text: event.headline,
+        spotlight: getMarketEventSpotlight(event, drug, city.label),
       })
     }
   }
@@ -410,6 +437,18 @@ function resolveDebtCollection(state: GameState, city: ReturnType<typeof getCurr
       {
         tone: 'alert',
         text: locale.game.debtCollectionNews(totalTaken, healthLoss),
+        spotlight: {
+          tone: 'alert',
+          title: locale.game.debtCollectionTitle,
+          detail: locale.game.debtCollectionDetail(
+            city.label,
+            bankTaken,
+            cashTaken,
+            nextState.health,
+          ),
+          artKey: 'collector',
+          artLabel: 'Collectors',
+        },
       },
     ],
     activity: [
@@ -448,6 +487,13 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
         {
           tone: 'encounter',
           text: locale.game.luckyBreakNews(bonus),
+          spotlight: {
+            tone: 'encounter',
+            title: locale.game.luckyBreakTitle,
+            detail: locale.game.luckyBreakDetail(city.label, bonus),
+            artKey: 'lucky-break',
+            artLabel: 'Cash drop',
+          },
         },
       ],
       activity: [
@@ -486,6 +532,13 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
         {
           tone: 'encounter',
           text: locale.game.stashSweepNews(seizedQuantity, largestHolding.label),
+          spotlight: {
+            tone: 'encounter',
+            title: locale.game.stashSweepTitle(seizedQuantity, largestHolding.label),
+            detail: locale.game.stashSweepDetail(city.label),
+            artKey: 'stash-sweep',
+            artLabel: `${largestHolding.label} seized`,
+          },
         },
       ],
       activity: [
@@ -521,6 +574,13 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
         {
           tone: 'encounter',
           text: locale.game.shakedownNews(cashTaken),
+          spotlight: {
+            tone: 'encounter',
+            title: locale.game.shakedownTitle,
+            detail: locale.game.shakedownDetail(city.label, cashTaken),
+            artKey: 'shakedown',
+            artLabel: 'Cash shakedown',
+          },
         },
       ],
       activity: [
@@ -552,6 +612,13 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
       {
         tone: 'encounter',
         text: locale.game.roughRideNews(damage),
+        spotlight: {
+          tone: 'encounter',
+          title: locale.game.roughRideTitle,
+          detail: locale.game.roughRideDetail(city.label, nextState.health),
+          artKey: 'rough-stop',
+          artLabel: 'Rough stop',
+        },
       },
     ],
     activity: [

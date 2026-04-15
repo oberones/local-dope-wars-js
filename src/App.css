@@ -1259,6 +1259,146 @@
   box-shadow: none;
 }
 
+.event-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(6, 7, 8, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.event-modal {
+  width: min(720px, calc(100vw - 2rem));
+  border-radius: 30px;
+  border: 1px solid rgba(247, 241, 232, 0.12);
+  background:
+    linear-gradient(180deg, rgba(30, 23, 19, 0.96), rgba(10, 11, 12, 0.98)),
+    rgba(15, 14, 13, 0.96);
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.event-modal--market {
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(34, 197, 94, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.event-modal--alert {
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(239, 68, 68, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.event-modal--encounter {
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(251, 113, 133, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.event-modal__header,
+.event-modal__body,
+.event-modal__actions {
+  position: relative;
+  z-index: 1;
+}
+
+.event-modal__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  padding: 1.4rem 1.4rem 0;
+}
+
+.event-modal__queue {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.event-modal__body {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
+  padding: 1.2rem 1.4rem 0;
+}
+
+.event-modal__art {
+  min-height: 220px;
+  border-radius: 24px;
+  border: 1px solid rgba(246, 235, 219, 0.12);
+  display: grid;
+  place-items: end start;
+  padding: 1rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(244, 197, 93, 0.24), transparent 32%),
+    linear-gradient(135deg, rgba(246, 235, 219, 0.08), rgba(246, 235, 219, 0.02)),
+    rgba(12, 13, 14, 0.8);
+}
+
+.event-modal__art span {
+  display: inline-flex;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(246, 235, 219, 0.12);
+  background: rgba(12, 13, 14, 0.5);
+  color: var(--text);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.event-modal__art--market-flood,
+.event-modal__art--market-lucky-break,
+.event-modal__art--lucky-break {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(34, 197, 94, 0.36), transparent 22%),
+    radial-gradient(circle at 78% 26%, rgba(244, 197, 93, 0.28), transparent 24%),
+    linear-gradient(135deg, rgba(16, 64, 36, 0.7), rgba(14, 15, 16, 0.9));
+}
+
+.event-modal__art--market-shortage,
+.event-modal__art--shakedown {
+  background:
+    radial-gradient(circle at 76% 20%, rgba(244, 197, 93, 0.34), transparent 24%),
+    linear-gradient(135deg, rgba(86, 58, 17, 0.72), rgba(14, 15, 16, 0.92));
+}
+
+.event-modal__art--market-raid,
+.event-modal__art--market-bust,
+.event-modal__art--collector,
+.event-modal__art--rough-stop,
+.event-modal__art--stash-sweep {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(239, 68, 68, 0.34), transparent 24%),
+    radial-gradient(circle at 18% 78%, rgba(56, 189, 248, 0.24), transparent 22%),
+    linear-gradient(135deg, rgba(64, 18, 18, 0.78), rgba(14, 15, 16, 0.92));
+}
+
+.event-modal__detail {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.event-modal__actions {
+  display: flex;
+  justify-content: end;
+  padding: 1.2rem 1.4rem 1.4rem;
+}
+
 @media (max-width: 1180px) {
   .launch-screen,
   .summary-screen__stats,
@@ -1278,7 +1418,8 @@
 
   .stats-grid,
   .signal-grid,
-  .offer-grid {
+  .offer-grid,
+  .event-modal__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1305,6 +1446,7 @@
   .stats-grid,
   .signal-grid,
   .offer-grid,
+  .event-modal__body,
   .summary-screen__stats,
   .finance-panel__summary,
   .finance-panel__grid,
@@ -1313,6 +1455,7 @@
   }
 
   .panel__header,
+  .event-modal__header,
   .offer-card__top,
   .pack-card__top,
   .offer-card__stats,
