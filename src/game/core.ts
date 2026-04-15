@@ -704,12 +704,9 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
     GAME_CONFIG.travelEncounterDamageMaxBase +
       Math.round(city.cops / GAME_CONFIG.travelEncounterDamageHeatDivisor),
   )
-  const cashDemand = Math.min(
-    state.cash,
-    Math.max(
-      180,
-      Math.round(baseDamage * 52 + city.cops * 7),
-    ),
+  const cashDemand = Math.max(
+    180,
+    Math.round(baseDamage * 52 + city.cops * 7),
   )
   const pendingNewsId = state.newsCursor
   const nextState: GameState = {

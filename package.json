@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "VITE_BASE_PATH=${VITE_BASE_PATH:-/apps/local-dope-wars/} tsc -b && VITE_BASE_PATH=${VITE_BASE_PATH:-/apps/local-dope-wars/} vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",

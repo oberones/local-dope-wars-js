@@ -348,4 +348,33 @@ describe('game core regressions', () => {
     expect(lostFight.cash).toBe(1_480)
     expect(lostFight.news[0]?.text).toBe(DEFAULT_LOCALE.game.lostCopFightNews(320, 16))
   })
+
+  it('still punishes surrender when the player cannot cover the full cop demand', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const brokeEncounter = {
+      ...baseGame,
+      cash: 0,
+      health: 100,
+      pendingEncounter: {
+        kind: 'cop-stop' as const,
+        newsId: 7,
+        cityId: 'lawrenceville',
+        cityLabel: 'Lawrenceville',
+        cashDemand: 640,
+        baseDamage: 10,
+      },
+    }
+
+    const surrendered = resolvePendingEncounter(brokeEncounter, 'surrender')
+
+    expect(surrendered.cash).toBe(0)
+    expect(surrendered.health).toBe(98)
+    expect(surrendered.pendingEncounter).toBeNull()
+    expect(surrendered.news[0]?.text).toBe(
+      DEFAULT_LOCALE.game.surrenderedCopStopNews(0, 2),
+    )
+  })
 })

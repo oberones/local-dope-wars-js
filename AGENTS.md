@@ -101,6 +101,8 @@ npm run test
 npm run build
 ```
 
+`npm run build` should resolve with `VITE_BASE_PATH=/apps/local-dope-wars/` by default. Override `VITE_BASE_PATH` explicitly only when targeting a different deployment mount point.
+
 Equivalent Makefile shortcuts are also available:
 
 ```bash
@@ -116,7 +118,7 @@ make docker-up
 
 Before finishing meaningful source changes:
 
-1. Run `npm run lint`, `npm run test`, and `npm run build`, or `make check`.
+1. Run `npm run lint`, `npm run test`, and `npm run build`, or `make check` if it preserves the same `/apps/local-dope-wars/` base-path expectation.
 3. Report any limitations or skipped verification clearly.
 
 When asked to create a commit:
@@ -124,6 +126,7 @@ When asked to create a commit:
 1. Use Conventional Commits for the subject line, for example `feat: add run persistence`.
 2. Include a short commit body that states what changed.
 3. Include a short validation note in the commit body, such as `Validation: npm run lint && npm run build`.
+4. Treat `/apps/local-dope-wars/` as the required default Vite base path for npm build validation unless the user explicitly asks for a different deployment target.
 
 ## Current State
 

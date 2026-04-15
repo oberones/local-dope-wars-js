@@ -121,6 +121,8 @@ npm run test
 npm run build
 ```
 
+`npm run build` defaults `VITE_BASE_PATH` to `/apps/local-dope-wars/` for the current deployment target. Override `VITE_BASE_PATH` explicitly only when building for a different mount point.
+
 Or run both together:
 
 ```bash
@@ -133,13 +135,13 @@ Or with Make:
 make check
 ```
 
-For a static deploy under `https://malevolentgods.com/apps/local-dope-wars/`, build with:
+For the current static deploy target under `https://malevolentgods.com/apps/local-dope-wars/`, build with:
 
 ```bash
 make build-subpath
 ```
 
-When changing gameplay or UI in meaningful ways, contributors should run `lint`, `test`, and `build` before finishing work.
+When changing gameplay or UI in meaningful ways, contributors should run `lint`, `test`, and a base-path-aware build before finishing work.
 
 ## Deployment Helpers
 
