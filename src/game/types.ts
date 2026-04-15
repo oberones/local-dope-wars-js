@@ -3,6 +3,7 @@ export type CityId = string
 export type ContentPackId = string
 export type LocaleId = string
 export type GearItemId = string
+export type EncounterChoiceId = 'flee' | 'fight' | 'surrender'
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert' | 'encounter'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
@@ -130,6 +131,19 @@ export interface EventSpotlight {
   detail: string
   artKey: EventSpotlightArtKey
   artLabel: string
+  decision?: {
+    kind: 'cop-stop'
+    choices: EncounterChoiceId[]
+  }
+}
+
+export interface PendingEncounter {
+  kind: 'cop-stop'
+  newsId: number
+  cityId: CityId
+  cityLabel: string
+  cashDemand: number
+  baseDamage: number
 }
 
 export interface ActivityItem {
@@ -159,6 +173,7 @@ export interface GameState {
   market: Record<DrugId, MarketOffer>
   news: NewsItem[]
   newsCursor: number
+  pendingEncounter: PendingEncounter | null
   activity: ActivityItem[]
   activityCursor: number
 }

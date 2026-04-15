@@ -1,14 +1,14 @@
 {
   "name": "local-dope-wars",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0 <21 || >=22.13.0"
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "VITE_BASE_PATH=${VITE_BASE_PATH:-/apps/local-dope-wars/} tsc -b && VITE_BASE_PATH=${VITE_BASE_PATH:-/apps/local-dope-wars/} vite build",
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
