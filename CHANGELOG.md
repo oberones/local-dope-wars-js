@@ -1,3 +1,13 @@
+## 0.7.0 (2026-04-14)
+
+### Feat
+
+- add jacker ambush encounter decisions
+
+### Fix
+
+- harden jacker ambush review followups
+
 ## 0.6.0 (2026-04-14)
 
 ### Feat
