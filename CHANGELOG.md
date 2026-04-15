@@ -1,3 +1,19 @@
+## 0.6.0 (2026-04-14)
+
+### Feat
+
+- add cop-stop encounter decisions
+
+### Fix
+
+- harden cop-stop review followups
+
+## 0.5.0 (2026-04-14)
+
+### Feat
+
+- add pawnable defensive gear
+
 ## 0.4.0 (2026-04-14)
 
 ### Feat
