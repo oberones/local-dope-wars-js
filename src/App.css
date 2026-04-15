@@ -451,6 +451,15 @@
   min-width: 190px;
 }
 
+.pack-import__button:focus-within {
+  outline: 2px solid rgba(143, 255, 210, 0.92);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 4px rgba(31, 187, 166, 0.18),
+    0 18px 38px rgba(249, 115, 22, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
 .pack-import__input {
   position: absolute;
   inset: 0;
