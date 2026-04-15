@@ -58,6 +58,7 @@ Useful additional commands:
 npm run preview
 npm run lint
 npm run build
+npm run test
 npm run check
 ```
 
@@ -68,6 +69,7 @@ make preview
 make lint
 make build
 make build-subpath
+make test
 make check
 make help
 ```
@@ -96,10 +98,11 @@ Notes:
 
 ## Testing And Validation
 
-This project does not yet have automated gameplay tests. Right now the main validation flow is:
+This project now includes a small automated regression suite for the typed game core. The main validation flow is:
 
 ```bash
 npm run lint
+npm run test
 npm run build
 ```
 
@@ -113,6 +116,7 @@ Or with Make:
 
 ```bash
 make test
+make check
 ```
 
 For a static deploy under `https://malevolentgods.com/apps/local-dope-wars/`, build with:
@@ -121,7 +125,7 @@ For a static deploy under `https://malevolentgods.com/apps/local-dope-wars/`, bu
 make build-subpath
 ```
 
-When changing gameplay or UI in meaningful ways, contributors should run `lint` and `build` before finishing work.
+When changing gameplay or UI in meaningful ways, contributors should run `lint`, `test`, and `build` before finishing work.
 
 ## Deployment Helpers
 
@@ -171,6 +175,7 @@ Recommended workflow:
 
 ```bash
 npm run lint
+npm run test
 npm run build
 ```
 
@@ -180,7 +185,7 @@ Or:
 make check
 ```
 
-5. If you create commits for shared work, use Conventional Commits and include a short subject like `feat: add encounter events`, a brief body describing what changed, and a validation note such as `Validation: npm run lint && npm run build`.
+5. If you create commits for shared work, use Conventional Commits and include a short subject like `feat: add encounter events`, a brief body describing what changed, and a validation note such as `Validation: npm run lint && npm run test && npm run build`.
 
 Areas that are especially helpful:
 
