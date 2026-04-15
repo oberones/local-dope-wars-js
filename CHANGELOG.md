@@ -1,3 +1,10 @@
+## 0.9.0 (2026-04-15)
+
+### Feat
+
+- add endgame pressure and closeout scoring
+- deepen weapon-aware encounter combat
+
 ## 0.8.0 (2026-04-15)
 
 ### Feat
