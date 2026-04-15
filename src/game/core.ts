@@ -1,4 +1,5 @@
 import {
+  GEAR_ITEMS,
   GAME_CONFIG,
   getContentPack,
 } from './content'
@@ -12,6 +13,8 @@ import type {
   DrugId,
   EventSpotlight,
   GameState,
+  GearItemDefinition,
+  GearItemId,
   MarketEventDefinition,
   MarketOffer,
   MarketTrigger,
@@ -52,6 +55,20 @@ function createInventoryRecord(drugIds: DrugId[]) {
     {} as Record<DrugId, number>,
   )
 }
+
+function createGearRecord(gearIds: GearItemId[]) {
+  return gearIds.reduce(
+    (gear, gearId) => {
+      gear[gearId] = 0
+      return gear
+    },
+    {} as Record<GearItemId, number>,
+  )
+}
+
+const GEAR_ITEMS_BY_ID = Object.fromEntries(
+  GEAR_ITEMS.map((item) => [item.id, item]),
+) as Record<GearItemId, GearItemDefinition>
 
 function createMarketRecord(drugIds: DrugId[]) {
   return drugIds.reduce(
@@ -284,6 +301,7 @@ export function createNewGame(
     cash: GAME_CONFIG.startingCash,
     currentCityId: startingCityId,
     inventory: createInventoryRecord(content.drugs.map((drug) => drug.id)),
+    gear: createGearRecord(GEAR_ITEMS.map((item) => item.id)),
     market,
     news: [],
     newsCursor: 0,
@@ -326,6 +344,78 @@ export function getUsedSpace(state: GameState) {
     (used, quantity) => used + quantity,
     0,
   )
+}
+
+export function getDefenseRating(state: GameState) {
+  return GEAR_ITEMS.reduce(
+    (total, item) => total + item.defense * state.gear[item.id],
+    0,
+  )
+}
+
+function getMitigatedDamage(baseDamage: number, defenseRating: number) {
+  if (baseDamage <= 0) {
+    return 0
+  }
+
+  return Math.max(
+    baseDamage - Math.round(defenseRating * GAME_CONFIG.defenseMitigationRate),
+    1,
+  )
+}
+
+function getGearUnitPawnValue(item: GearItemDefinition, unitIndex: number) {
+  return Math.max(
+    Math.round(item.pawnBaseValue * item.pawnDecayRate ** unitIndex),
+    1,
+  )
+}
+
+function getGearPawnProceedsForQuantity(state: GameState, gearId: GearItemId, quantity: number) {
+  const item = GEAR_ITEMS_BY_ID[gearId]
+  const owned = state.gear[gearId]
+
+  if (!item || quantity <= 0 || owned <= 0) {
+    return 0
+  }
+
+  const safeQuantity = Math.min(quantity, owned)
+
+  return Array.from({ length: safeQuantity }, (_, index) =>
+    getGearUnitPawnValue(item, owned - safeQuantity + index),
+  ).reduce((total, value) => total + value, 0)
+}
+
+export function getGearValue(state: GameState) {
+  return GEAR_ITEMS.reduce(
+    (total, item) =>
+      total + getGearPawnProceedsForQuantity(state, item.id, state.gear[item.id]),
+    0,
+  )
+}
+
+export function getMaxGearBuyQuantity(state: GameState, gearId: GearItemId) {
+  const item = GEAR_ITEMS_BY_ID[gearId]
+
+  if (!item) {
+    return 0
+  }
+
+  return Math.max(
+    Math.min(
+      item.maxOwned - state.gear[gearId],
+      Math.floor(state.cash / item.cost),
+    ),
+    0,
+  )
+}
+
+export function getMaxGearPawnQuantity(state: GameState, gearId: GearItemId) {
+  return state.gear[gearId]
+}
+
+export function getNextGearPawnOffer(state: GameState, gearId: GearItemId) {
+  return getGearPawnProceedsForQuantity(state, gearId, 1)
 }
 
 export function getAvailableSpace(state: GameState) {
@@ -418,9 +508,12 @@ function resolveDebtCollection(state: GameState, city: ReturnType<typeof getCurr
     uncovered > 0 ?
       Math.min(
         state.health,
-        randomInt(
-          GAME_CONFIG.debtCollectionDamageMin,
-          GAME_CONFIG.debtCollectionDamageMax,
+        getMitigatedDamage(
+          randomInt(
+            GAME_CONFIG.debtCollectionDamageMin,
+            GAME_CONFIG.debtCollectionDamageMax,
+          ),
+          getDefenseRating(state),
         ),
       )
     : 0
@@ -596,10 +689,13 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
 
   const damage = Math.min(
     state.health,
-    randomInt(
-      GAME_CONFIG.travelEncounterDamageMin,
-      GAME_CONFIG.travelEncounterDamageMaxBase +
-        Math.round(city.cops / GAME_CONFIG.travelEncounterDamageHeatDivisor),
+    getMitigatedDamage(
+      randomInt(
+        GAME_CONFIG.travelEncounterDamageMin,
+        GAME_CONFIG.travelEncounterDamageMaxBase +
+          Math.round(city.cops / GAME_CONFIG.travelEncounterDamageHeatDivisor),
+      ),
+      getDefenseRating(state),
     ),
   )
   const nextState: GameState = {
@@ -731,7 +827,8 @@ export function getNetWorth(state: GameState) {
   return (
     state.cash +
     state.bankDeposit +
-    getInventoryValue(state) -
+    getInventoryValue(state) +
+    getGearValue(state) -
     state.debt -
     state.pawnDebt
   )
@@ -767,6 +864,7 @@ export function buildRunSummary(state: GameState): RunSummary {
     bankDeposit: state.bankDeposit,
     health: state.health,
     inventoryValue: getInventoryValue(state),
+    gearValue: getGearValue(state),
     stashUsed: getUsedSpace(state),
     totalSpace: state.totalSpace,
     score,
@@ -1357,6 +1455,127 @@ export function payPawnDebt(state: GameState, amount: number) {
         'finance',
         locale.game.repaidPawnTitle(amount),
         locale.game.repaidPawnDetail(nextState.pawnDebt),
+      ),
+    ],
+  })
+}
+
+export function buyGear(state: GameState, gearId: GearItemId, quantity = 1) {
+  if (quantity <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.gearQuantityRequired,
+        },
+      ],
+    })
+  }
+
+  const item = GEAR_ITEMS_BY_ID[gearId]
+
+  if (!item) {
+    return state
+  }
+
+  const maxBuy = getMaxGearBuyQuantity(state, gearId)
+
+  if (maxBuy <= 0 || quantity > maxBuy) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text:
+            state.gear[gearId] >= item.maxOwned ?
+              locale.game.gearCarryLimit(item.label)
+            : locale.game.gearTooExpensive(item.label),
+        },
+      ],
+    })
+  }
+
+  const total = item.cost * quantity
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash - total,
+    gear: {
+      ...state.gear,
+      [gearId]: state.gear[gearId] + quantity,
+    },
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: locale.game.boughtGearNews(quantity, item.label, total),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        locale.game.boughtGearTitle(quantity, item.label),
+        locale.game.boughtGearDetail(getDefenseRating(nextState)),
+      ),
+    ],
+  })
+}
+
+export function pawnGear(state: GameState, gearId: GearItemId, quantity = 1) {
+  if (quantity <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.gearPawnQuantityRequired,
+        },
+      ],
+    })
+  }
+
+  const item = GEAR_ITEMS_BY_ID[gearId]
+
+  if (!item) {
+    return state
+  }
+
+  const maxPawnQuantity = getMaxGearPawnQuantity(state, gearId)
+
+  if (maxPawnQuantity <= 0 || quantity > maxPawnQuantity) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.noGearToPawn(item.label),
+        },
+      ],
+    })
+  }
+
+  const proceeds = getGearPawnProceedsForQuantity(state, gearId, quantity)
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash + proceeds,
+    gear: {
+      ...state.gear,
+      [gearId]: state.gear[gearId] - quantity,
+    },
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: locale.game.pawnedGearNews(quantity, item.label, proceeds),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        locale.game.pawnedGearTitle(quantity, item.label),
+        locale.game.pawnedGearDetail(nextState.cash, getDefenseRating(nextState)),
       ),
     ],
   })

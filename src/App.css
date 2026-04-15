@@ -210,7 +210,7 @@
 .stats-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
 .signal-grid {
@@ -633,6 +633,99 @@
 .finance-control__hint--error,
 .offer-card__hint--error {
   color: #fca5a5;
+}
+
+.gear-rack {
+  position: relative;
+  z-index: 1;
+  margin-top: 1.3rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(246, 235, 219, 0.08);
+}
+
+.gear-rack__grid {
+  margin-top: 1.1rem;
+  display: grid;
+  gap: 0.95rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.gear-card {
+  --gear-accent: #f97316;
+  --gear-glow: rgba(249, 115, 22, 0.2);
+  padding: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(246, 235, 219, 0.08);
+  background:
+    radial-gradient(circle at top right, var(--gear-glow), transparent 38%),
+    linear-gradient(180deg, rgba(16, 18, 18, 0.82), rgba(20, 18, 16, 0.96)),
+    rgba(16, 18, 18, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+    0 16px 34px rgba(0, 0, 0, 0.2);
+}
+
+.gear-card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.gear-card__top h3 {
+  margin: 0.15rem 0 0;
+  font-size: 1.35rem;
+}
+
+.gear-card__kicker {
+  margin: 0;
+  color: color-mix(in srgb, var(--gear-accent) 72%, var(--muted));
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gear-card__category {
+  display: inline-flex;
+  padding: 0.28rem 0.58rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--gear-accent) 30%, rgba(246, 235, 219, 0.08));
+  background: color-mix(in srgb, var(--gear-accent) 14%, rgba(246, 235, 219, 0.03));
+  color: var(--text);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gear-card__stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.gear-card__price {
+  margin: 0.9rem 0 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: -0.04em;
+}
+
+.gear-card__hint {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  min-height: 1.25rem;
+}
+
+.gear-card__actions {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
 }
 
 .activity-list {
@@ -1419,6 +1512,7 @@
   .stats-grid,
   .signal-grid,
   .offer-grid,
+  .gear-rack__grid,
   .event-modal__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1446,6 +1540,7 @@
   .stats-grid,
   .signal-grid,
   .offer-grid,
+  .gear-rack__grid,
   .event-modal__body,
   .summary-screen__stats,
   .finance-panel__summary,
@@ -1457,8 +1552,10 @@
   .panel__header,
   .event-modal__header,
   .offer-card__top,
+  .gear-card__top,
   .pack-card__top,
   .offer-card__stats,
+  .gear-card__stats,
   .progress-cluster__copy,
   .scoreboard__item,
   .activity-item__meta,
@@ -1469,6 +1566,10 @@
 
   .offer-card__price-block {
     text-align: left;
+  }
+
+  .gear-card__actions {
+    grid-template-columns: 1fr;
   }
 
   .hero__actions,

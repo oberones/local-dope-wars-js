@@ -133,18 +133,18 @@ When asked to create a commit:
 - The current built-in content still defaults to the Gwinnett County location set.
 - A typed content-pack foundation now includes a player-facing launch-screen picker and more than one bundled starter pack.
 - A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
-- Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, and debt-collector pressure are now live, but longer-term health/combat systems are still pending.
+- Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, debt-collector pressure, and pawnable defensive gear are now live, but longer-term combat systems are still pending.
 - A typed event spotlight layer now drives popup windows for market shocks, collectors, and travel encounters, with room for future illustrated encounter art.
 - A growing Vitest regression suite now covers core content-pack, travel, market-event, finance-pressure, pawn-flow, storage/save normalization, and key browser-like app flows in `jsdom`.
-- Save/load depth, weapons, deeper pawn/bank systems, and endgame polish are still pending.
+- Save/load depth, deeper pawn/bank systems, broader combat depth, and endgame polish are still pending.
 
 ## Good Next Steps
 
 1. Expand the locale layer to cover the remaining player-facing copy and support additional locales.
-2. Deepen debt pressure, bank depth, and any follow-on weapon/combat systems.
+2. Deepen debt pressure, bank depth, and follow-on combat systems around the new gear lane.
 3. Add more bundled or importable content packs beyond the current starter set.
 4. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
-5. Expand automated coverage around save/load, UI flows, and deeper finance/combat systems.
+5. Expand automated coverage around save/load, gear/combat interactions, UI flows, and deeper finance systems.
 
 ## Legacy References
 
