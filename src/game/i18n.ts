@@ -275,6 +275,7 @@ export const EN_US_LOCALE = {
       'Arm up for rough nights, then pawn duplicate hardware when cash gets tight.',
     gearOwned: (quantity: number) => `Owned ${quantity}`,
     gearDefense: (defense: number) => `Defense +${defense}`,
+    gearFight: (fightPower: number) => `Fight +${fightPower}`,
     gearBuyButton: 'Buy 1',
     gearPawnButton: 'Pawn 1',
     gearPawnOffer: (amount: number) => `Next pawn offer ${formatMoney(amount)}`,
@@ -443,13 +444,13 @@ export const EN_US_LOCALE = {
     surrenderedJackerTitle: 'Dropped the stash',
     surrenderedJackerDetail: (cityLabel: string, quantity: number, drugLabel: string) =>
       `You gave up ${quantity} ${drugLabel} near ${cityLabel} so the route could stay open.`,
-    wonJackerFightNews: (healthLoss: number) =>
+    wonJackerFightNews: (healthLoss: number, cashBonus: number) =>
       healthLoss > 0
-        ? `You beat back the crew but still lost ${healthLoss} health in the clash.`
-        : 'You beat back the crew without taking a real hit.',
+        ? `You beat back the crew, pocketed ${formatMoney(cashBonus)}, and still lost ${healthLoss} health in the clash.`
+        : `You beat back the crew and pocketed ${formatMoney(cashBonus)} without taking a real hit.`,
     wonJackerFightTitle: 'Beat the ambush',
-    wonJackerFightDetail: (cityLabel: string, health: number) =>
-      `You held the line near ${cityLabel}. Health is now ${health}%.`,
+    wonJackerFightDetail: (cityLabel: string, health: number, cashBonus: number) =>
+      `You held the line near ${cityLabel}, stripped ${formatMoney(cashBonus)} off the crew, and left with ${health}% health.`,
     lostJackerFightNews: (quantity: number, drugLabel: string, healthLoss: number) =>
       `The ambush went bad. You lost ${quantity} ${drugLabel} and ${healthLoss} health before breaking away.`,
     lostJackerFightTitle: 'Lost the ambush',
@@ -483,11 +484,26 @@ export const EN_US_LOCALE = {
     wonCopFightTitle: 'Won the stop',
     wonCopFightDetail: (cityLabel: string, health: number) =>
       `You held your ground near ${cityLabel} and broke contact. Health is now ${health}%.`,
-    lostCopFightNews: (cashLost: number, healthLoss: number) =>
-      `The fight went bad. You lost ${formatMoney(cashLost)} and ${healthLoss} health before they backed off.`,
+    lostCopFightNews: (
+      cashLost: number,
+      healthLoss: number,
+      seizedQuantity = 0,
+      seizedLabel = 'stash',
+    ) =>
+      seizedQuantity > 0
+        ? `The fight went bad. You lost ${formatMoney(cashLost)}, ${seizedQuantity} ${seizedLabel}, and ${healthLoss} health before they backed off.`
+        : `The fight went bad. You lost ${formatMoney(cashLost)} and ${healthLoss} health before they backed off.`,
     lostCopFightTitle: 'Lost the stop',
-    lostCopFightDetail: (cityLabel: string, cashLost: number, health: number) =>
-      `The stop near ${cityLabel} cost ${formatMoney(cashLost)} and left your health at ${health}%.`,
+    lostCopFightDetail: (
+      cityLabel: string,
+      cashLost: number,
+      health: number,
+      seizedQuantity = 0,
+      seizedLabel = 'stash',
+    ) =>
+      seizedQuantity > 0
+        ? `The stop near ${cityLabel} cost ${formatMoney(cashLost)}, ${seizedQuantity} ${seizedLabel}, and left your health at ${health}%.`
+        : `The stop near ${cityLabel} cost ${formatMoney(cashLost)} and left your health at ${health}%.`,
     roughRideNews: (damage: number) =>
       `A rough stop left you down ${damage} health.`,
     roughRideTitle: 'Rough stop',

@@ -344,9 +344,93 @@ describe('game core regressions', () => {
     expect(surrendered.health).toBe(100)
     expect(wonFight.health).toBe(99)
     expect(wonFight.cash).toBe(encounterState.cash)
+    expect(wonFight.inventory).toEqual(encounterState.inventory)
     expect(lostFight.health).toBe(84)
     expect(lostFight.cash).toBe(1_480)
+    expect(lostFight.inventory).toEqual(encounterState.inventory)
     expect(lostFight.news[0]?.text).toBe(DEFAULT_LOCALE.game.lostCopFightNews(320, 16))
+  })
+
+  it('lets stronger weapons swing marginal encounter fights', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const encounterState = {
+      ...baseGame,
+      currentCityId: 'lawrenceville',
+      health: 100,
+      pendingEncounter: {
+        kind: 'cop-stop' as const,
+        newsId: 77,
+        cityId: 'lawrenceville',
+        cityLabel: 'Lawrenceville',
+        cashDemand: 640,
+        baseDamage: 10,
+      },
+    }
+
+    mockRandomSequence([], 0.3)
+    const switchbladeFight = resolvePendingEncounter(
+      {
+        ...encounterState,
+        gear: {
+          ...encounterState.gear,
+          switchblade: 1,
+        },
+      },
+      'fight',
+    )
+    vi.restoreAllMocks()
+
+    mockRandomSequence([], 0.3)
+    const shotgunFight = resolvePendingEncounter(
+      {
+        ...encounterState,
+        gear: {
+          ...encounterState.gear,
+          'pump-shotgun': 1,
+        },
+      },
+      'fight',
+    )
+
+    expect(switchbladeFight.health).toBeLessThan(shotgunFight.health)
+    expect(switchbladeFight.cash).toBeLessThan(shotgunFight.cash)
+    expect(shotgunFight.news[0]?.text).toBe(DEFAULT_LOCALE.game.wonCopFightNews(1))
+  })
+
+  it('can seize stash when a cop fight goes bad', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const encounterState = {
+      ...baseGame,
+      currentCityId: 'lawrenceville',
+      cash: 1_800,
+      health: 100,
+      inventory: {
+        ...baseGame.inventory,
+        meth: 10,
+      },
+      pendingEncounter: {
+        kind: 'cop-stop' as const,
+        newsId: 78,
+        cityId: 'lawrenceville',
+        cityLabel: 'Lawrenceville',
+        cashDemand: 640,
+        baseDamage: 10,
+      },
+    }
+
+    mockRandomSequence([], 0.999)
+    const lostFight = resolvePendingEncounter(encounterState, 'fight')
+
+    expect(lostFight.inventory.meth).toBe(7)
+    expect(lostFight.news[0]?.text).toBe(
+      DEFAULT_LOCALE.game.lostCopFightNews(320, 16, 3, 'Meth'),
+    )
   })
 
   it('still punishes surrender when the player cannot cover the full cop demand', () => {
@@ -461,10 +545,14 @@ describe('game core regressions', () => {
     expect(surrendered.inventory.meth).toBe(8)
     expect(wonFight.inventory.meth).toBe(12)
     expect(wonFight.health).toBe(99)
+    expect(wonFight.cash).toBe(2_348)
     expect(lostFight.inventory.meth).toBe(8)
     expect(lostFight.health).toBe(87)
     expect(lostFight.news[0]?.text).toBe(
       DEFAULT_LOCALE.game.lostJackerFightNews(4, 'Meth', 13),
+    )
+    expect(wonFight.news[0]?.text).toBe(
+      DEFAULT_LOCALE.game.wonJackerFightNews(1, 348),
     )
   })
 })
