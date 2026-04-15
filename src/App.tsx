@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import './App.css'
 import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GAME_CONFIG, getContentPack } from './game/content'
@@ -215,6 +215,8 @@ function App() {
   )
   const [financeDrafts, setFinanceDrafts] = useState(createFinanceDrafts)
   const [seenSpotlightNewsId, setSeenSpotlightNewsId] = useState(-1)
+  const spotlightDialogRef = useRef<HTMLElement | null>(null)
+  const spotlightDismissRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (screen !== 'run' || !game) {
@@ -290,6 +292,68 @@ function App() {
 
   const pendingSpotlights =
     screen === 'run' ? getPendingSpotlights(game, seenSpotlightNewsId) : []
+  const activeSpotlightNews = pendingSpotlights[0] ?? null
+  const activeSpotlight =
+    activeSpotlightNews ?
+      {
+        ...activeSpotlightNews.spotlight,
+        newsId: activeSpotlightNews.id,
+      }
+    : null
+
+  useEffect(() => {
+    if (!activeSpotlightNews) {
+      return
+    }
+
+    const previousFocusedElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const dialogElement = spotlightDialogRef.current
+    const dismissButton = spotlightDismissRef.current
+
+    dismissButton?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setSeenSpotlightNewsId(activeSpotlightNews.id)
+        return
+      }
+
+      if (event.key !== 'Tab' || !dialogElement) {
+        return
+      }
+
+      const focusableElements = Array.from(
+        dialogElement.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute('disabled'))
+
+      if (focusableElements.length === 0) {
+        event.preventDefault()
+        return
+      }
+
+      const firstElement = focusableElements[0]
+      const lastElement = focusableElements[focusableElements.length - 1]
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault()
+        lastElement.focus()
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault()
+        firstElement.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocusedElement?.focus()
+    }
+  }, [activeSpotlightNews])
 
   function setDraft(drugId: DrugId, nextValue: string) {
     setTradeDrafts((current) => ({
@@ -756,13 +820,6 @@ function App() {
       ? locale.hints.pawnDebtCleared
       : locale.hints.noCashForPawn,
   )
-  const activeSpotlight =
-    pendingSpotlights[0] ?
-      {
-        ...pendingSpotlights[0].spotlight,
-        newsId: pendingSpotlights[0].id,
-      }
-    : null
   const dismissSpotlight = () => {
     if (!activeSpotlight) {
       return
@@ -774,13 +831,23 @@ function App() {
   return (
     <>
       {activeSpotlight ? (
-        <div className="event-modal-backdrop" role="presentation">
+        <div
+          className="event-modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              dismissSpotlight()
+            }
+          }}
+        >
           <section
             className={`event-modal event-modal--${activeSpotlight.tone}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="event-modal-title"
             aria-describedby="event-modal-detail"
+            ref={spotlightDialogRef}
+            tabIndex={-1}
           >
             <div className="event-modal__header">
               <div>
@@ -805,7 +872,11 @@ function App() {
               </p>
             </div>
             <div className="event-modal__actions">
-              <button className="accent-button" onClick={dismissSpotlight}>
+              <button
+                ref={spotlightDismissRef}
+                className="accent-button"
+                onClick={dismissSpotlight}
+              >
                 {locale.run.spotlightDismiss}
               </button>
             </div>
