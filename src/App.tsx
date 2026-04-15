@@ -61,6 +61,7 @@ import type {
   GameState,
   HighScoreEntry,
   NewsItem,
+  PendingEncounter,
 } from './game/types'
 
 type AppScreen = 'menu' | 'run' | 'summary'
@@ -205,6 +206,27 @@ function getPendingSpotlights(
     .sort((left, right) => left.id - right.id)
 }
 
+function getCopStopSpotlight(
+  encounter: PendingEncounter,
+  existingSpotlight?: EventSpotlight,
+) {
+  if (existingSpotlight?.decision?.kind === 'cop-stop') {
+    return existingSpotlight
+  }
+
+  return {
+    tone: 'encounter' as const,
+    title: locale.game.copStopTitle,
+    detail: locale.game.copStopDetail(encounter.cityLabel, encounter.cashDemand),
+    artKey: 'rough-stop' as const,
+    artLabel: 'Rough stop',
+    decision: {
+      kind: 'cop-stop' as const,
+      choices: ['flee', 'fight', 'surrender'] as const,
+    },
+  }
+}
+
 function App() {
   const [screen, setScreen] = useState<AppScreen>('menu')
   const [game, setGame] = useState<GameState | null>(null)
@@ -301,25 +323,35 @@ function App() {
 
   const pendingSpotlights =
     screen === 'run' ? getPendingSpotlights(game, seenSpotlightNewsId) : []
+  const pendingEncounterNews =
+    game?.pendingEncounter ?
+      game.news.find((item) => item.id === game.pendingEncounter?.newsId)
+    : null
   const activeSpotlightNews = pendingSpotlights[0] ?? null
   const activeSpotlight =
-    activeSpotlightNews ?
+    game?.pendingEncounter ?
+      {
+        ...getCopStopSpotlight(game.pendingEncounter, pendingEncounterNews?.spotlight),
+        newsId: game.pendingEncounter.newsId,
+      }
+    : activeSpotlightNews ?
       {
         ...activeSpotlightNews.spotlight,
         newsId: activeSpotlightNews.id,
       }
     : null
-  const activePendingEncounter =
-    activeSpotlight &&
-    game?.pendingEncounter &&
-    game.pendingEncounter.newsId === activeSpotlight.newsId
-      ? game.pendingEncounter
-      : null
+  const activePendingEncounter = game?.pendingEncounter ?? null
+  const spotlightQueueCount =
+    activePendingEncounter &&
+    !pendingSpotlights.some((item) => item.id === activePendingEncounter.newsId) ?
+      pendingSpotlights.length + 1
+    : pendingSpotlights.length
   const requiresSpotlightDecision =
     activeSpotlight?.decision?.kind === 'cop-stop' && Boolean(activePendingEncounter)
+  const activeSpotlightNewsId = activeSpotlight?.newsId ?? null
 
   useEffect(() => {
-    if (!activeSpotlightNews) {
+    if (activeSpotlightNewsId === null) {
       return
     }
 
@@ -338,7 +370,7 @@ function App() {
         }
 
         event.preventDefault()
-        setSeenSpotlightNewsId(activeSpotlightNews.id)
+        setSeenSpotlightNewsId(activeSpotlightNewsId)
         return
       }
 
@@ -375,7 +407,7 @@ function App() {
       document.removeEventListener('keydown', handleKeyDown)
       previousFocusedElement?.focus()
     }
-  }, [activeSpotlightNews, requiresSpotlightDecision])
+  }, [activeSpotlightNewsId, requiresSpotlightDecision])
 
   function setDraft(drugId: DrugId, nextValue: string) {
     setTradeDrafts((current) => ({
@@ -894,7 +926,7 @@ function App() {
                 <h2 id="event-modal-title">{activeSpotlight.title}</h2>
               </div>
               <p className="event-modal__queue">
-                {locale.run.spotlightQueue(pendingSpotlights.length)}
+                {locale.run.spotlightQueue(spotlightQueueCount)}
               </p>
             </div>
             <div className="event-modal__body">

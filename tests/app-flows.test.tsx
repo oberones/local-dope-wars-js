@@ -123,12 +123,12 @@ describe('app browser flows', () => {
     })
   })
 
-  it('forces a cop-stop decision before closing the encounter popup', async () => {
+  it('forces a resumed pending cop-stop decision even when the spotlight is no longer queued', async () => {
     const savedGame = {
       ...createNewGame('gwinnett-county'),
       currentCityId: 'lawrenceville' as const,
       cash: 1_800,
-      newsCursor: 0,
+      newsCursor: 2,
       pendingEncounter: {
         kind: 'cop-stop' as const,
         newsId: 1,
