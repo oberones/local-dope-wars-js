@@ -249,6 +249,7 @@ export function createNewGame(
     day: 1,
     endDay: GAME_CONFIG.endDay,
     debt: GAME_CONFIG.startingDebt,
+    pawnDebt: GAME_CONFIG.startingPawnDebt,
     bankDeposit: 0,
     stoneLevel: 0,
     health: GAME_CONFIG.maxHealth,
@@ -611,8 +612,16 @@ export function getMaxDebtPayment(state: GameState) {
   return Math.min(state.cash, state.debt)
 }
 
+export function getMaxPawnRepayment(state: GameState) {
+  return Math.min(state.cash, state.pawnDebt)
+}
+
 export function getMaxBorrowAmount(state: GameState) {
   return Math.max(GAME_CONFIG.maxDebt - state.debt, 0)
+}
+
+export function getMaxPawnAdvanceAmount(state: GameState) {
+  return Math.max(GAME_CONFIG.maxPawnDebt - state.pawnDebt, 0)
 }
 
 export function getMaxHealthRecoveryAmount(state: GameState) {
@@ -630,7 +639,13 @@ export function getHealthRecoveryCost(state: GameState) {
 }
 
 export function getNetWorth(state: GameState) {
-  return state.cash + state.bankDeposit + getInventoryValue(state) - state.debt
+  return (
+    state.cash +
+    state.bankDeposit +
+    getInventoryValue(state) -
+    state.debt -
+    state.pawnDebt
+  )
 }
 
 export function getScoreTier(
@@ -659,6 +674,7 @@ export function buildRunSummary(state: GameState): RunSummary {
     cityLabel: getCurrentCity(state).label,
     cash: state.cash,
     debt: state.debt,
+    pawnDebt: state.pawnDebt,
     bankDeposit: state.bankDeposit,
     health: state.health,
     inventoryValue: getInventoryValue(state),
@@ -716,6 +732,7 @@ export function travelToCity(state: GameState, cityId: CityId) {
     currentCityId: cityId,
     day: state.day + 1,
     debt: Math.round(state.debt * GAME_CONFIG.dailyInterestRate),
+    pawnDebt: Math.round(state.pawnDebt * GAME_CONFIG.pawnDailyInterestRate),
     bankDeposit: state.bankDeposit + bankYield,
     market,
   }
@@ -1129,6 +1146,116 @@ export function borrowMoney(state: GameState, amount: number) {
         'finance',
         locale.game.borrowedTitle(amount),
         locale.game.borrowedDetail(nextState.cash, nextState.debt),
+      ),
+    ],
+  })
+}
+
+export function takePawnAdvance(state: GameState, amount: number) {
+  if (amount <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.pawnAmountRequired,
+        },
+      ],
+    })
+  }
+
+  const maxPawnAdvance = getMaxPawnAdvanceAmount(state)
+
+  if (maxPawnAdvance <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.noPawnRoom,
+        },
+      ],
+    })
+  }
+
+  if (amount > maxPawnAdvance) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.pawnTooHigh,
+        },
+      ],
+    })
+  }
+
+  const pawnCharge = Math.round(amount * GAME_CONFIG.pawnAdvanceFeeRate)
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash + amount,
+    pawnDebt: state.pawnDebt + pawnCharge,
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: locale.game.pawnedNews(amount, pawnCharge),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        locale.game.pawnedTitle(amount),
+        locale.game.pawnedDetail(nextState.cash, nextState.pawnDebt),
+      ),
+    ],
+  })
+}
+
+export function payPawnDebt(state: GameState, amount: number) {
+  if (amount <= 0) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.payPawnAmountRequired,
+        },
+      ],
+    })
+  }
+
+  const maxPayment = getMaxPawnRepayment(state)
+
+  if (amount > maxPayment) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.payPawnTooHigh,
+        },
+      ],
+    })
+  }
+
+  const nextState: GameState = {
+    ...state,
+    cash: state.cash - amount,
+    pawnDebt: state.pawnDebt - amount,
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'system',
+        text: locale.game.repaidPawnNews(amount),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'finance',
+        locale.game.repaidPawnTitle(amount),
+        locale.game.repaidPawnDetail(nextState.pawnDebt),
       ),
     ],
   })

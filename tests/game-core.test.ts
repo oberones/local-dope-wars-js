@@ -5,6 +5,8 @@ import {
   createNewGame,
   getDailyBankYield,
   getDebtCollectionChance,
+  payPawnDebt,
+  takePawnAdvance,
   travelToCity,
 } from '../src/game/core'
 import { DEFAULT_LOCALE } from '../src/game/i18n'
@@ -118,5 +120,38 @@ describe('game core regressions', () => {
     expect(next.day).toBe(state.day)
     expect(next.currentCityId).toBe(state.currentCityId)
     expect(next.news[0]?.text).toBe(DEFAULT_LOCALE.game.tooHurtToMove)
+  })
+
+  it('supports pawn advances with harsher debt pressure and repayment', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const pawned = takePawnAdvance(baseGame, 1_000)
+
+    expect(pawned.cash).toBe(baseGame.cash + 1_000)
+    expect(pawned.pawnDebt).toBe(1_350)
+
+    mockRandomSequence([], 0.999)
+    const traveled = travelToCity(
+      {
+        ...pawned,
+        currentCityId: 'lawrenceville',
+      },
+      'duluth',
+    )
+
+    expect(traveled.pawnDebt).toBe(Math.round(1_350 * GAME_CONFIG.pawnDailyInterestRate))
+
+    const repaid = payPawnDebt(
+      {
+        ...pawned,
+        cash: 3_000,
+      },
+      500,
+    )
+
+    expect(repaid.cash).toBe(2_500)
+    expect(repaid.pawnDebt).toBe(850)
   })
 })

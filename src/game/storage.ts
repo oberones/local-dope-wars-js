@@ -75,6 +75,7 @@ function isGameState(value: unknown): value is GameState {
     typeof value.day === 'number' &&
     typeof value.endDay === 'number' &&
     typeof value.debt === 'number' &&
+    (typeof value.pawnDebt === 'number' || typeof value.pawnDebt === 'undefined') &&
     typeof value.bankDeposit === 'number' &&
     typeof value.stoneLevel === 'number' &&
     typeof value.health === 'number' &&
@@ -106,6 +107,7 @@ function isHighScoreEntry(value: unknown): value is HighScoreEntry {
     typeof value.cityLabel === 'string' &&
     typeof value.cash === 'number' &&
     typeof value.debt === 'number' &&
+    (typeof value.pawnDebt === 'number' || typeof value.pawnDebt === 'undefined') &&
     typeof value.bankDeposit === 'number' &&
     typeof value.health === 'number' &&
     typeof value.inventoryValue === 'number' &&
@@ -115,6 +117,22 @@ function isHighScoreEntry(value: unknown): value is HighScoreEntry {
     typeof value.tierMessage === 'string' &&
     typeof value.recordedAt === 'string'
   )
+}
+
+function normalizeGameState(game: GameState | (GameState & { pawnDebt?: number })) {
+  return {
+    ...game,
+    pawnDebt: game.pawnDebt ?? 0,
+  }
+}
+
+function normalizeHighScore(
+  entry: HighScoreEntry | (HighScoreEntry & { pawnDebt?: number }),
+) {
+  return {
+    ...entry,
+    pawnDebt: entry.pawnDebt ?? 0,
+  }
 }
 
 function readStorage<T>(key: string): T | null {
@@ -150,7 +168,7 @@ export function loadSavedGame() {
     return null
   }
 
-  return stored.game
+  return normalizeGameState(stored.game)
 }
 
 export function saveGame(game: GameState) {
@@ -185,7 +203,10 @@ export function loadHighScores() {
     return []
   }
 
-  return sortHighScores(stored.filter(isHighScoreEntry)).slice(0, MAX_HIGH_SCORES)
+  return sortHighScores(stored.filter(isHighScoreEntry).map(normalizeHighScore)).slice(
+    0,
+    MAX_HIGH_SCORES,
+  )
 }
 
 export function recordHighScore(entry: HighScoreEntry) {
