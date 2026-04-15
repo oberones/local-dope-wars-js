@@ -87,6 +87,8 @@ This is the modern rebuild of the classic Dope Wars project, now branded as Loca
 - Do not import runtime code from `../gwinnett-dope-wars/assets/js/*.js`.
 - Do not rebuild the app around direct DOM manipulation.
 - Do not hand-edit generated output in `dist/`.
+- Do not edit `CHANGELOG.md` or bump package versions as part of normal feature/fix work.
+- Treat changelog generation and version bumps as user-managed manual release operations handled with Commitizen.
 - Do not make meaningful source changes inside `node_modules/`.
 - Avoid adding dependencies unless they clearly support the modern rebuild.
 
