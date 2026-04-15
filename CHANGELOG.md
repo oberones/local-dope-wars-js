@@ -1,3 +1,17 @@
+## 0.3.0 (2026-04-14)
+
+### Feat
+
+- add pawn advance finance mechanics
+- add debt pressure and bank yield
+- add typed market event tables
+
+### Fix
+
+- tighten pawn debt review followups
+- support subpath deployments
+- make market event labels exhaustive
+
 ## 0.2.0 (2026-04-13)
 
 ### Feat
