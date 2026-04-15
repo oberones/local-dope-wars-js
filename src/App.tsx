@@ -1816,6 +1816,7 @@ function App() {
                         <div className="gear-card__stats">
                           <span>{locale.run.gearOwned(owned)}</span>
                           <span>{locale.run.gearDefense(item.defense)}</span>
+                          <span>{locale.run.gearFight(item.fightPower)}</span>
                         </div>
 
                         <p className="gear-card__price">
