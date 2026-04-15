@@ -4,6 +4,11 @@ import type {
   ContentPackId,
   DrugDefinition,
   GearItemDefinition,
+  MapDistrictDefinition,
+  MapLabelDefinition,
+  MapSceneDefinition,
+  MarketEventDefinition,
+  PriceBand,
   ScoreTier,
 } from './types'
 
@@ -839,40 +844,453 @@ export const ATLANTA_INTOWN_CONTENT_PACK: ContentPackDefinition = {
   scoreTiers: ATLANTA_SCORE_TIERS,
 }
 
-export const CONTENT_PACKS: ContentPackDefinition[] = [
+const CUSTOM_CONTENT_PACKS_KEY = 'local-dope-wars.custom-packs.v1'
+
+const BUILT_IN_CONTENT_PACKS: ContentPackDefinition[] = [
   GWINNETT_CONTENT_PACK,
   ATLANTA_INTOWN_CONTENT_PACK,
 ]
 
-export const CONTENT_PACKS_BY_ID = CONTENT_PACKS.reduce(
-  (lookup, pack) => {
-    lookup[pack.id] = {
-      ...pack,
-      citiesById: pack.cities.reduce(
-        (cityLookup, city) => {
-          cityLookup[city.id] = city
-          return cityLookup
-        },
-        {} as Record<CityDefinition['id'], CityDefinition>,
-      ),
-      drugsById: pack.drugs.reduce(
-        (drugLookup, drug) => {
-          drugLookup[drug.id] = drug
-          return drugLookup
-        },
-        {} as Record<DrugDefinition['id'], DrugDefinition>,
-      ),
+type ResolvedContentPack = ContentPackDefinition & {
+  citiesById: Record<CityDefinition['id'], CityDefinition>
+  drugsById: Record<DrugDefinition['id'], DrugDefinition>
+}
+
+const BUILT_IN_CONTENT_PACK_IDS = new Set(BUILT_IN_CONTENT_PACKS.map((pack) => pack.id))
+
+let CONTENT_PACKS: ContentPackDefinition[] = [...BUILT_IN_CONTENT_PACKS]
+let CONTENT_PACKS_BY_ID: Record<ContentPackId, ResolvedContentPack> = {}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readStorage<T>(key: string) {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const raw = window.localStorage.getItem(key)
+
+    if (!raw) {
+      return null
     }
-    return lookup
-  },
-  {} as Record<
-    ContentPackId,
-    ContentPackDefinition & {
-      citiesById: Record<CityDefinition['id'], CityDefinition>
-      drugsById: Record<DrugDefinition['id'], DrugDefinition>
+
+    return JSON.parse(raw) as T
+  } catch {
+    return null
+  }
+}
+
+function writeStorage(key: string, value: unknown) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(value))
+}
+
+function requireStringField(record: Record<string, unknown>, field: string, context: string) {
+  const value = record[field]
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`${context} requires a non-empty "${field}" string.`)
+  }
+
+  return value
+}
+
+function requireNumberField(record: Record<string, unknown>, field: string, context: string) {
+  const value = record[field]
+
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    throw new Error(`${context} requires a numeric "${field}" value.`)
+  }
+
+  return value
+}
+
+function readOptionalStringField(record: Record<string, unknown>, field: string) {
+  const value = record[field]
+
+  if (typeof value === 'undefined') {
+    return undefined
+  }
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`Optional field "${field}" must be a non-empty string when present.`)
+  }
+
+  return value
+}
+
+function parsePriceBand(value: unknown, context: string): PriceBand {
+  if (!isRecord(value)) {
+    throw new Error(`${context} must be an object with "min" and "max".`)
+  }
+
+  const min = requireNumberField(value, 'min', context)
+  const max = requireNumberField(value, 'max', context)
+
+  if (max < min) {
+    throw new Error(`${context} must not have "max" lower than "min".`)
+  }
+
+  return { min, max }
+}
+
+function parseMarketEventDefinition(value: unknown, index: number): MarketEventDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Market event ${index + 1} must be an object.`)
+  }
+
+  const kind = requireStringField(value, 'kind', `Market event ${index + 1}`)
+  const modifier = requireStringField(value, 'modifier', `Market event ${index + 1}`)
+  const headline = requireStringField(value, 'headline', `Market event ${index + 1}`)
+  const chance = value.chance
+
+  if (
+    kind !== 'flood' &&
+    kind !== 'shortage' &&
+    kind !== 'raid' &&
+    kind !== 'bust' &&
+    kind !== 'lucky-break'
+  ) {
+    throw new Error(`Market event ${index + 1} has an unsupported "kind".`)
+  }
+
+  if (modifier !== 'cheap' && modifier !== 'expensive') {
+    throw new Error(`Market event ${index + 1} must use "cheap" or "expensive" modifier.`)
+  }
+
+  if (typeof chance !== 'undefined' && (typeof chance !== 'number' || chance < 0 || chance > 1)) {
+    throw new Error(`Market event ${index + 1} chance must stay between 0 and 1.`)
+  }
+
+  return {
+    kind,
+    modifier,
+    headline,
+    chance,
+    ...parsePriceBand(value, `Market event ${index + 1}`),
+  }
+}
+
+function parseDrugDefinition(value: unknown, index: number): DrugDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Drug ${index + 1} must be an object.`)
+  }
+
+  const cheap = value.cheap
+  const expensive = value.expensive
+  const marketEvents = value.marketEvents
+
+  return {
+    id: requireStringField(value, 'id', `Drug ${index + 1}`),
+    label: requireStringField(value, 'label', `Drug ${index + 1}`),
+    flavor: requireStringField(value, 'flavor', `Drug ${index + 1}`),
+    accent: requireStringField(value, 'accent', `Drug ${index + 1}`),
+    basePrice: parsePriceBand(value.basePrice, `Drug ${index + 1} basePrice`),
+    cheap:
+      typeof cheap === 'undefined' ?
+        undefined
+      : {
+          ...parsePriceBand(cheap, `Drug ${index + 1} cheap trigger`),
+          headline: requireStringField(cheap as Record<string, unknown>, 'headline', `Drug ${index + 1} cheap trigger`),
+        },
+    expensive:
+      typeof expensive === 'undefined' ?
+        undefined
+      : {
+          ...parsePriceBand(expensive, `Drug ${index + 1} expensive trigger`),
+          headline: requireStringField(
+            expensive as Record<string, unknown>,
+            'headline',
+            `Drug ${index + 1} expensive trigger`,
+          ),
+        },
+    marketEvents:
+      Array.isArray(marketEvents) ?
+        marketEvents.map((event, eventIndex) => parseMarketEventDefinition(event, eventIndex))
+      : undefined,
+  }
+}
+
+function parseCityDefinition(value: unknown, index: number): CityDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`City ${index + 1} must be an object.`)
+  }
+
+  if (!isRecord(value.map)) {
+    throw new Error(`City ${index + 1} requires a "map" object.`)
+  }
+
+  const maxDrugs = value.maxDrugs
+
+  if (
+    typeof maxDrugs !== 'undefined' &&
+    (typeof maxDrugs !== 'number' || !Number.isFinite(maxDrugs))
+  ) {
+    throw new Error(`City ${index + 1} "maxDrugs" must be numeric when present.`)
+  }
+
+  return {
+    id: requireStringField(value, 'id', `City ${index + 1}`),
+    label: requireStringField(value, 'label', `City ${index + 1}`),
+    district: requireStringField(value, 'district', `City ${index + 1}`),
+    landmark: requireStringField(value, 'landmark', `City ${index + 1}`),
+    atmosphere: requireStringField(value, 'atmosphere', `City ${index + 1}`),
+    signature: requireStringField(value, 'signature', `City ${index + 1}`),
+    cops: requireNumberField(value, 'cops', `City ${index + 1}`),
+    minDrugs: requireNumberField(value, 'minDrugs', `City ${index + 1}`),
+    maxDrugs,
+    map: {
+      x: requireNumberField(value.map, 'x', `City ${index + 1} map`),
+      y: requireNumberField(value.map, 'y', `City ${index + 1} map`),
+    },
+    tagline: requireStringField(value, 'tagline', `City ${index + 1}`),
+  }
+}
+
+function parseMapDistrictDefinition(
+  value: unknown,
+  index: number,
+  cityIds: Set<string>,
+): MapDistrictDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Map district ${index + 1} must be an object.`)
+  }
+
+  if (!Array.isArray(value.cityIds) || value.cityIds.length === 0) {
+    throw new Error(`Map district ${index + 1} must list at least one city id.`)
+  }
+
+  const districtCityIds = value.cityIds.map((cityId) => {
+    if (typeof cityId !== 'string' || !cityIds.has(cityId)) {
+      throw new Error(`Map district ${index + 1} references an unknown city id.`)
     }
-  >,
-)
+
+    return cityId
+  })
+
+  return {
+    id: requireStringField(value, 'id', `Map district ${index + 1}`),
+    label: requireStringField(value, 'label', `Map district ${index + 1}`),
+    subtitle: requireStringField(value, 'subtitle', `Map district ${index + 1}`),
+    points: requireStringField(value, 'points', `Map district ${index + 1}`),
+    cityIds: districtCityIds,
+    fill: requireStringField(value, 'fill', `Map district ${index + 1}`),
+  }
+}
+
+function parseMapLabelDefinition(value: unknown, index: number): MapLabelDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Map label ${index + 1} must be an object.`)
+  }
+
+  return {
+    x: requireNumberField(value, 'x', `Map label ${index + 1}`),
+    y: requireNumberField(value, 'y', `Map label ${index + 1}`),
+    text: requireStringField(value, 'text', `Map label ${index + 1}`),
+  }
+}
+
+function parseMapSceneDefinition(
+  value: unknown,
+  cityIds: Set<string>,
+): MapSceneDefinition {
+  if (!isRecord(value)) {
+    throw new Error('Content pack "map" must be an object.')
+  }
+
+  if (!Array.isArray(value.routes)) {
+    throw new Error('Content pack map requires a "routes" array.')
+  }
+
+  const routes = value.routes.map((route, index) => {
+    if (
+      !Array.isArray(route) ||
+      route.length !== 2 ||
+      typeof route[0] !== 'string' ||
+      typeof route[1] !== 'string' ||
+      !cityIds.has(route[0]) ||
+      !cityIds.has(route[1])
+    ) {
+      throw new Error(`Map route ${index + 1} must connect two known city ids.`)
+    }
+
+    return [route[0], route[1]] as [string, string]
+  })
+
+  if (!Array.isArray(value.districts) || !Array.isArray(value.arterials) || !Array.isArray(value.labels)) {
+    throw new Error('Content pack map must provide districts, arterials, and labels arrays.')
+  }
+
+  return {
+    title: requireStringField(value, 'title', 'Content pack map'),
+    ariaLabel: requireStringField(value, 'ariaLabel', 'Content pack map'),
+    routes,
+    districts: value.districts.map((district, index) =>
+      parseMapDistrictDefinition(district, index, cityIds),
+    ),
+    arterials: value.arterials.map((arterial, index) => {
+      if (typeof arterial !== 'string' || arterial.trim() === '') {
+        throw new Error(`Map arterial ${index + 1} must be a non-empty string.`)
+      }
+
+      return arterial
+    }),
+    labels: value.labels.map((label, index) => parseMapLabelDefinition(label, index)),
+  }
+}
+
+function parseScoreTier(value: unknown, index: number): ScoreTier {
+  if (!isRecord(value)) {
+    throw new Error(`Score tier ${index + 1} must be an object.`)
+  }
+
+  return {
+    threshold: requireNumberField(value, 'threshold', `Score tier ${index + 1}`),
+    message: requireStringField(value, 'message', `Score tier ${index + 1}`),
+  }
+}
+
+function assertUniqueIds(values: string[], context: string) {
+  if (new Set(values).size !== values.length) {
+    throw new Error(`${context} must use unique ids.`)
+  }
+}
+
+function parseContentPackDefinition(
+  value: unknown,
+  allowBuiltInId = false,
+): ContentPackDefinition {
+  if (!isRecord(value)) {
+    throw new Error('Content pack JSON must be an object.')
+  }
+
+  const id = requireStringField(value, 'id', 'Content pack')
+
+  if (!allowBuiltInId && BUILT_IN_CONTENT_PACK_IDS.has(id)) {
+    throw new Error(`"${id}" is reserved by a built-in content pack.`)
+  }
+
+  if (!Array.isArray(value.cities) || value.cities.length === 0) {
+    throw new Error('Content pack must include at least one city.')
+  }
+
+  if (!Array.isArray(value.drugs) || value.drugs.length === 0) {
+    throw new Error('Content pack must include at least one drug.')
+  }
+
+  if (!Array.isArray(value.scoreTiers) || value.scoreTiers.length === 0) {
+    throw new Error('Content pack must include at least one score tier.')
+  }
+
+  const cities = value.cities.map((city, index) => parseCityDefinition(city, index))
+  const drugs = value.drugs.map((drug, index) => parseDrugDefinition(drug, index))
+  const scoreTiers = value.scoreTiers.map((tier, index) => parseScoreTier(tier, index))
+  const cityIds = new Set(cities.map((city) => city.id))
+  const drugIds = drugs.map((drug) => drug.id)
+  const startingCityId = readOptionalStringField(value, 'startingCityId')
+
+  assertUniqueIds([...cityIds], 'Content pack cities')
+  assertUniqueIds(drugIds, 'Content pack drugs')
+
+  if (startingCityId && !cityIds.has(startingCityId)) {
+    throw new Error('Content pack "startingCityId" must reference one of its cities.')
+  }
+
+  return {
+    id,
+    label: requireStringField(value, 'label', 'Content pack'),
+    shortLabel: requireStringField(value, 'shortLabel', 'Content pack'),
+    description: requireStringField(value, 'description', 'Content pack'),
+    accent: requireStringField(value, 'accent', 'Content pack'),
+    startingCityId,
+    map: parseMapSceneDefinition(value.map, cityIds),
+    cities,
+    drugs,
+    scoreTiers,
+  }
+}
+
+function buildContentPackLookup(packs: ContentPackDefinition[]) {
+  return packs.reduce(
+    (lookup, pack) => {
+      lookup[pack.id] = {
+        ...pack,
+        citiesById: pack.cities.reduce(
+          (cityLookup, city) => {
+            cityLookup[city.id] = city
+            return cityLookup
+          },
+          {} as Record<CityDefinition['id'], CityDefinition>,
+        ),
+        drugsById: pack.drugs.reduce(
+          (drugLookup, drug) => {
+            drugLookup[drug.id] = drug
+            return drugLookup
+          },
+          {} as Record<DrugDefinition['id'], DrugDefinition>,
+        ),
+      }
+      return lookup
+    },
+    {} as Record<ContentPackId, ResolvedContentPack>,
+  )
+}
+
+function readPersistedCustomContentPacks() {
+  const stored = readStorage<unknown>(CUSTOM_CONTENT_PACKS_KEY)
+
+  if (!Array.isArray(stored)) {
+    return []
+  }
+
+  return stored.flatMap((pack) => {
+    try {
+      return [parseContentPackDefinition(pack)]
+    } catch {
+      return []
+    }
+  })
+}
+
+function writePersistedCustomContentPacks(packs: ContentPackDefinition[]) {
+  writeStorage(CUSTOM_CONTENT_PACKS_KEY, packs)
+}
+
+function refreshContentPackRegistry(customPacks = readPersistedCustomContentPacks()) {
+  CONTENT_PACKS = [...BUILT_IN_CONTENT_PACKS, ...customPacks]
+  CONTENT_PACKS_BY_ID = buildContentPackLookup(CONTENT_PACKS)
+}
+
+refreshContentPackRegistry()
+
+export function listContentPacks() {
+  return CONTENT_PACKS
+}
+
+export function listImportedContentPacks() {
+  return CONTENT_PACKS.filter((pack) => !BUILT_IN_CONTENT_PACK_IDS.has(pack.id))
+}
+
+export function isBuiltInContentPack(packId: string) {
+  return BUILT_IN_CONTENT_PACK_IDS.has(packId)
+}
+
+export function importCustomContentPack(value: unknown) {
+  const nextPack = parseContentPackDefinition(value)
+  const importedPacks = listImportedContentPacks().filter((pack) => pack.id !== nextPack.id)
+  const nextImportedPacks = [...importedPacks, nextPack]
+
+  writePersistedCustomContentPacks(nextImportedPacks)
+  refreshContentPackRegistry(nextImportedPacks)
+
+  return nextPack
+}
 
 export const DEFAULT_CONTENT_PACK = CONTENT_PACKS_BY_ID[GAME_CONFIG.defaultContentPackId]
 

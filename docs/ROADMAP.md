@@ -19,11 +19,12 @@ Completed:
 - Text-first event spotlight popups for market shocks, collectors, and travel encounters
 - Automated regression coverage for core gameplay, storage/save normalization, and key browser-like UI flows plus lint/test/build verification flow
 - The current built-in content pack still defaults to the original Gwinnett County setting
+- Browser-local JSON import for custom content packs, validated through the typed content layer and launcher picker
 
 Still missing:
 
 - Broader i18n coverage
-- More configurable location/content packs beyond the built-in defaults
+- More bundled packs plus deeper import/export tooling for customizable location/content packs
 - Deeper combat/endgame systems on top of the new defensive gear lane and initial encounter-choice flows
 - Production-ready art assets
 - Broader browser-level save/load and UI automated coverage beyond the current smoke paths

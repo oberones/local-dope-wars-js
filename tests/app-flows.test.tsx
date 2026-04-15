@@ -17,6 +17,111 @@ function renderApp() {
   }
 }
 
+const SAVANNAH_PACK = {
+  id: 'savannah-nights',
+  label: 'Savannah Nights',
+  shortLabel: 'Savannah',
+  description: 'Port routes, tourist spillover, and riverfront pressure after dark.',
+  accent: '#14b8a6',
+  startingCityId: 'starland',
+  map: {
+    title: 'Savannah corridor',
+    ariaLabel: 'Illustrated Savannah late-night market map',
+    routes: [
+      ['riverfront', 'starland'],
+      ['starland', 'midtown-savannah'],
+    ],
+    districts: [
+      {
+        id: 'north',
+        label: 'Riverfront',
+        subtitle: 'Tourist spill',
+        points: '18,16 74,16 70,32 22,34',
+        cityIds: ['riverfront'],
+        fill: 'rgba(20, 184, 166, 0.1)',
+      },
+      {
+        id: 'south',
+        label: 'Starland / Midtown',
+        subtitle: 'Warehouse drag',
+        points: '16,38 78,38 74,80 20,78',
+        cityIds: ['starland', 'midtown-savannah'],
+        fill: 'rgba(249, 115, 22, 0.1)',
+      },
+    ],
+    arterials: [
+      'M20 27 C34 29, 48 29, 72 27',
+      'M34 27 C34 44, 34 56, 34 74',
+      'M58 27 C58 44, 58 56, 58 74',
+    ],
+    labels: [
+      { x: 50, y: 21, text: 'River drag' },
+      { x: 50, y: 58, text: 'Warehouse lanes' },
+    ],
+  },
+  cities: [
+    {
+      id: 'riverfront',
+      label: 'Riverfront',
+      district: 'Historic district',
+      landmark: 'Bar exits and tourist drift',
+      atmosphere: 'Crowded sidewalks and easy hiding spots.',
+      signature: 'Fast late-night flips when the bars spill out.',
+      cops: 24,
+      minDrugs: 4,
+      maxDrugs: 8,
+      map: { x: 34, y: 28 },
+      tagline: 'Tourist money covers messy lanes.',
+    },
+    {
+      id: 'starland',
+      label: 'Starland',
+      district: 'Arts strip',
+      landmark: 'Converted garages and side-street bars',
+      atmosphere: 'Loose nightlife and quick handoffs between blocks.',
+      signature: 'Steady ground for mid-market movement.',
+      cops: 18,
+      minDrugs: 5,
+      maxDrugs: 9,
+      map: { x: 46, y: 51 },
+      tagline: 'Young crowds and soft eyes keep routes open.',
+    },
+    {
+      id: 'midtown-savannah',
+      label: 'Midtown',
+      district: 'Hospital corridor',
+      landmark: 'Strip malls and broad arterial cuts',
+      atmosphere: 'Long roads, routine traffic, and sudden pressure spikes.',
+      signature: 'Reliable if you can survive the patrol rhythm.',
+      cops: 32,
+      minDrugs: 4,
+      maxDrugs: 8,
+      map: { x: 58, y: 69 },
+      tagline: 'Routine traffic hides volume until it does not.',
+    },
+  ],
+  drugs: [
+    {
+      id: 'acid',
+      label: 'Acid',
+      flavor: 'Tourist strip tab run',
+      accent: '#f97316',
+      basePrice: { min: 900, max: 4000 },
+    },
+    {
+      id: 'weed',
+      label: 'Weed',
+      flavor: 'Steady port-city green',
+      accent: '#22c55e',
+      basePrice: { min: 180, max: 760 },
+    },
+  ],
+  scoreTiers: [
+    { threshold: 0, message: 'Still floating.' },
+    { threshold: 18000, message: 'Owning the river.' },
+  ],
+}
+
 describe('app browser flows', () => {
   beforeEach(() => {
     window.localStorage.clear()
@@ -74,6 +179,22 @@ describe('app browser flows', () => {
     const pawnPanel = await screen.findByRole('tabpanel', { name: 'Pawn shop' })
     expect(within(pawnPanel).getByText('Patch up')).toBeTruthy()
     expect(within(pawnPanel).queryByRole('button', { name: 'Borrow' })).toBeNull()
+  })
+
+  it('imports a custom JSON pack into the launcher and arms it for new runs', async () => {
+    const { user } = renderApp()
+
+    await user.upload(
+      screen.getByLabelText('Import pack JSON'),
+      new File([JSON.stringify(SAVANNAH_PACK)], 'savannah-nights.json', {
+        type: 'application/json',
+      }),
+    )
+
+    expect(await screen.findByText('Savannah Nights is ready for new runs.')).toBeTruthy()
+    expect(screen.getByText('Savannah Nights')).toBeTruthy()
+    expect(screen.getByText('Imported pack')).toBeTruthy()
+    expect(screen.getByText('New runs are currently armed for Savannah Nights.')).toBeTruthy()
   })
 
   it('continues a final-day saved run and finalizes it through the summary screen', async () => {
