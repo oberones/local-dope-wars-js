@@ -1,3 +1,13 @@
+## 0.8.0 (2026-04-15)
+
+### Feat
+
+- split operations into business tabs
+
+### Fix
+
+- harden business tab accessibility
+
 ## 0.7.0 (2026-04-14)
 
 ### Feat
