@@ -6,6 +6,14 @@ const HIGH_SCORES_KEY = 'local-dope-wars.high-scores.v1'
 const SELECTED_PACK_KEY = 'local-dope-wars.selected-pack.v1'
 const MAX_HIGH_SCORES = 10
 
+type StoredGameState = Omit<GameState, 'pawnDebt'> & {
+  pawnDebt?: number
+}
+
+type StoredHighScoreEntry = Omit<HighScoreEntry, 'pawnDebt'> & {
+  pawnDebt?: number
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -56,7 +64,7 @@ function isMarketRecord(value: unknown, drugIds: string[]) {
   })
 }
 
-function isGameState(value: unknown): value is GameState {
+function isStoredGameState(value: unknown): value is StoredGameState {
   if (
     !isRecord(value) ||
     typeof value.contentPackId !== 'string' ||
@@ -75,6 +83,7 @@ function isGameState(value: unknown): value is GameState {
     typeof value.day === 'number' &&
     typeof value.endDay === 'number' &&
     typeof value.debt === 'number' &&
+    (typeof value.pawnDebt === 'number' || typeof value.pawnDebt === 'undefined') &&
     typeof value.bankDeposit === 'number' &&
     typeof value.stoneLevel === 'number' &&
     typeof value.health === 'number' &&
@@ -93,7 +102,7 @@ function isGameState(value: unknown): value is GameState {
   )
 }
 
-function isHighScoreEntry(value: unknown): value is HighScoreEntry {
+function isStoredHighScoreEntry(value: unknown): value is StoredHighScoreEntry {
   return (
     isRecord(value) &&
     typeof value.runId === 'string' &&
@@ -106,6 +115,7 @@ function isHighScoreEntry(value: unknown): value is HighScoreEntry {
     typeof value.cityLabel === 'string' &&
     typeof value.cash === 'number' &&
     typeof value.debt === 'number' &&
+    (typeof value.pawnDebt === 'number' || typeof value.pawnDebt === 'undefined') &&
     typeof value.bankDeposit === 'number' &&
     typeof value.health === 'number' &&
     typeof value.inventoryValue === 'number' &&
@@ -115,6 +125,20 @@ function isHighScoreEntry(value: unknown): value is HighScoreEntry {
     typeof value.tierMessage === 'string' &&
     typeof value.recordedAt === 'string'
   )
+}
+
+function normalizeGameState(game: StoredGameState): GameState {
+  return {
+    ...game,
+    pawnDebt: game.pawnDebt ?? 0,
+  }
+}
+
+function normalizeHighScore(entry: StoredHighScoreEntry): HighScoreEntry {
+  return {
+    ...entry,
+    pawnDebt: entry.pawnDebt ?? 0,
+  }
 }
 
 function readStorage<T>(key: string): T | null {
@@ -146,11 +170,11 @@ function writeStorage(key: string, value: unknown) {
 export function loadSavedGame() {
   const stored = readStorage<{ version: number; game: unknown }>(SAVE_KEY)
 
-  if (!stored || stored.version !== 1 || !isGameState(stored.game)) {
+  if (!stored || stored.version !== 1 || !isStoredGameState(stored.game)) {
     return null
   }
 
-  return stored.game
+  return normalizeGameState(stored.game)
 }
 
 export function saveGame(game: GameState) {
@@ -185,7 +209,9 @@ export function loadHighScores() {
     return []
   }
 
-  return sortHighScores(stored.filter(isHighScoreEntry)).slice(0, MAX_HIGH_SCORES)
+  return sortHighScores(
+    stored.filter(isStoredHighScoreEntry).map(normalizeHighScore),
+  ).slice(0, MAX_HIGH_SCORES)
 }
 
 export function recordHighScore(entry: HighScoreEntry) {

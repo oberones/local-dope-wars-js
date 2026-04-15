@@ -129,7 +129,7 @@ export const EN_US_LOCALE = {
       `${cityLabel}, day ${day}`,
     freshRunHeading: 'Thirty nights to build a stack',
     savedRunSummary: (score: number, cash: number, debt: number) =>
-      `Resume with ${formatMoney(score)} in net worth, ${formatMoney(cash)} cash, and ${formatMoney(debt)} debt still hanging over the run.`,
+      `Resume with ${formatMoney(score)} in net worth, ${formatMoney(cash)} cash, and ${formatMoney(debt)} in total obligations still hanging over the run.`,
     freshRunSummary: (shortLabel: string) =>
       `Open a new ${shortLabel} run with cash in pocket, debt on your back, and the county map ready to work.`,
     newRunArmedNote: (contentLabel: string) =>
@@ -172,6 +172,7 @@ export const EN_US_LOCALE = {
     bankLabel: 'Bank',
     inventoryValueLabel: 'Inventory value',
     debtLabel: 'Debt',
+    pawnLabel: 'Pawn debt',
     backToLaunchBoard: 'Back to launch board',
     startAnotherRun: 'Start another run',
     currentLeaderboardHeading: 'Current leaderboard',
@@ -232,6 +233,8 @@ export const EN_US_LOCALE = {
     streetMedicTravelLock:
       'You are too beat up to travel. Patch up before moving again.',
     outstandingDebt: 'Outstanding debt',
+    pawnBalance: 'Pawn balance',
+    pawnHeadroom: 'Pawn headroom',
     creditRemaining: 'Credit remaining',
     nextBankYield: 'Next bank yield',
     collectorRisk: 'Collector risk',
@@ -241,6 +244,10 @@ export const EN_US_LOCALE = {
     withdrawButton: 'Withdraw',
     payDebtLabel: 'Pay debt',
     payDebtButton: 'Pay',
+    pawnAdvanceLabel: 'Emergency pawn advance',
+    pawnAdvanceButton: 'Pawn',
+    payPawnLabel: 'Pay pawn balance',
+    payPawnButton: 'Pay off',
     borrowLabel: 'Borrow more cash',
     borrowButton: 'Borrow',
     ledgerEyebrow: 'Ledger',
@@ -288,7 +295,10 @@ export const EN_US_LOCALE = {
     noCashToStash: 'No cash available to stash right now.',
     noBankReserve: 'No bank reserve available to withdraw.',
     debtCleared: 'Debt is cleared.',
+    pawnDebtCleared: 'Pawn debt is cleared.',
     noCashForDebt: 'No cash available to pay debt.',
+    noPawnRoom: 'No pawn room is left on this run.',
+    noCashForPawn: 'No cash available to pay down pawn debt.',
     loanCeilingReached: 'Loan ceiling already reached for this run.',
     noCollectorRisk: 'Collectors are not leaning on this run yet.',
     offMarket:
@@ -409,6 +419,24 @@ export const EN_US_LOCALE = {
     borrowedTitle: (amount: number) => `Borrowed ${formatMoney(amount)}`,
     borrowedDetail: (cash: number, debt: number) =>
       `Cash rose to ${formatMoney(cash)} while debt climbed to ${formatMoney(debt)}.`,
+    pawnAmountRequired: 'Enter a pawn amount higher than zero.',
+    noPawnRoom: 'No more pawn room is available on this run.',
+    pawnTooHigh:
+      'That would push your pawn balance past the current pawn ceiling.',
+    pawnedNews: (amount: number, pawnCharge: number) =>
+      `Pawned your way into ${formatMoney(amount)} cash and ${formatMoney(pawnCharge)} in hard repayment pressure.`,
+    pawnedTitle: (amount: number) => `Pawned for ${formatMoney(amount)}`,
+    pawnedDetail: (cash: number, pawnDebt: number) =>
+      `Cash rose to ${formatMoney(cash)} while pawn debt climbed to ${formatMoney(pawnDebt)}.`,
+    payPawnAmountRequired: 'Enter a pawn payment amount higher than zero.',
+    payPawnTooHigh:
+      'You cannot pay more pawn debt than your cash on hand or remaining pawn balance.',
+    repaidPawnNews: (amount: number) =>
+      `Paid down ${formatMoney(amount)} in pawn debt.`,
+    repaidPawnTitle: (amount: number) =>
+      `Paid ${formatMoney(amount)} toward pawn debt`,
+    repaidPawnDetail: (pawnDebt: number) =>
+      `Outstanding pawn debt dropped to ${formatMoney(pawnDebt)}.`,
     debtCollectionNews: (amount: number, healthLoss: number) =>
       healthLoss > 0
         ? `Collectors stripped ${formatMoney(amount)} and left you down ${healthLoss} health.`
