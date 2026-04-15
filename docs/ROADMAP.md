@@ -16,7 +16,7 @@ Completed:
 - Finance layer with bank actions, debt pressure, bank yield, and emergency pawn advances
 - Typed market event tables and heat/health encounter systems
 - Text-first event spotlight popups for market shocks, collectors, and travel encounters
-- Automated regression coverage for core gameplay and storage/save normalization plus lint/test/build verification flow
+- Automated regression coverage for core gameplay, storage/save normalization, and key browser-like UI flows plus lint/test/build verification flow
 - The current built-in content pack still defaults to the original Gwinnett County setting
 
 Still missing:
@@ -25,7 +25,7 @@ Still missing:
 - More configurable location/content packs beyond the built-in defaults
 - Deeper combat/endgame systems
 - Production-ready art assets
-- Broader browser-level save/load and UI automated coverage
+- Broader browser-level save/load and UI automated coverage beyond the current smoke paths
 - Endgame polish and progression balance
 
 ## Guiding Priorities
