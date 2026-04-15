@@ -1,14 +1,3 @@
-## 0.5.0 (2026-04-14)
-
-### Feat
-
-- add pawnable defensive gear
-- add cop-stop encounter decisions with fight, flee, and surrender outcomes
-
-### Docs
-
-- document current bundled location packs and custom pack setup in the README
-
 ## 0.4.0 (2026-04-14)
 
 ### Feat
