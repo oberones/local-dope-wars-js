@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import './App.css'
 import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GEAR_ITEMS, GAME_CONFIG, getContentPack } from './game/content'
 import { DEFAULT_LOCALE } from './game/i18n'
@@ -65,11 +65,21 @@ import type {
 } from './game/types'
 
 type AppScreen = 'menu' | 'run' | 'summary'
+type OpsVenue = 'market' | 'bank' | 'pawn'
 type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'pawn' | 'payPawn' | 'borrow'
 const locale = DEFAULT_LOCALE
+const OPS_VENUES: OpsVenue[] = ['market', 'bank', 'pawn']
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled pending encounter: ${String(value)}`)
+}
+
+function getOpsVenueTabId(venue: OpsVenue) {
+  return `ops-tab-${venue}`
+}
+
+function getOpsVenuePanelId(venue: OpsVenue) {
+  return `ops-panel-${venue}`
 }
 
 function createTradeDrafts(drugIds = DEFAULT_CONTENT_PACK.drugs.map((drug) => drug.id)) {
@@ -270,7 +280,13 @@ function App() {
     () => createTradeDrafts(),
   )
   const [financeDrafts, setFinanceDrafts] = useState(createFinanceDrafts)
+  const [activeOpsVenue, setActiveOpsVenue] = useState<OpsVenue>('market')
   const [seenSpotlightNewsId, setSeenSpotlightNewsId] = useState(-1)
+  const opsTabRefs = useRef<Record<OpsVenue, HTMLButtonElement | null>>({
+    market: null,
+    bank: null,
+    pawn: null,
+  })
   const spotlightDialogRef = useRef<HTMLElement | null>(null)
   const spotlightDismissRef = useRef<HTMLButtonElement | null>(null)
 
@@ -294,6 +310,7 @@ function App() {
     setFocusedCityId(nextGame.currentCityId)
     setTradeDrafts(createTradeDrafts(nextContent.drugs.map((drug) => drug.id)))
     setFinanceDrafts(createFinanceDrafts())
+    setActiveOpsVenue('market')
     setSeenSpotlightNewsId(replayExistingSpotlights ? -1 : nextGame.newsCursor - 1)
     setScreen('run')
   }
@@ -451,6 +468,50 @@ function App() {
 
   function clearFinanceDraft(field: FinanceDraftKey) {
     setFinanceDraft(field, '')
+  }
+
+  function focusOpsVenue(venue: OpsVenue) {
+    opsTabRefs.current[venue]?.focus()
+  }
+
+  function activateOpsVenue(venue: OpsVenue) {
+    setActiveOpsVenue(venue)
+  }
+
+  function handleOpsVenueKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    venue: OpsVenue,
+  ) {
+    const currentIndex = OPS_VENUES.indexOf(venue)
+
+    if (currentIndex < 0) {
+      return
+    }
+
+    let nextVenue: OpsVenue | null = null
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextVenue = OPS_VENUES[(currentIndex + 1) % OPS_VENUES.length]
+        break
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextVenue = OPS_VENUES[(currentIndex - 1 + OPS_VENUES.length) % OPS_VENUES.length]
+        break
+      case 'Home':
+        nextVenue = OPS_VENUES[0]
+        break
+      case 'End':
+        nextVenue = OPS_VENUES[OPS_VENUES.length - 1]
+        break
+      default:
+        return
+    }
+
+    event.preventDefault()
+    activateOpsVenue(nextVenue)
+    focusOpsVenue(nextVenue)
   }
 
   function fillMaxBuy(drugId: DrugId) {
@@ -906,6 +967,12 @@ function App() {
       ? locale.hints.pawnDebtCleared
       : locale.hints.noCashForPawn,
   )
+  const activeOpsVenueSummary =
+    activeOpsVenue === 'market'
+      ? locale.run.blackMarketSummary
+      : activeOpsVenue === 'bank'
+        ? locale.run.bankSummary
+        : locale.run.pawnShopSummary
   const dismissSpotlight = () => {
     if (!activeSpotlight || requiresSpotlightDecision) {
       return
@@ -1177,368 +1244,619 @@ function App() {
       </section>
 
       <section className="ops-grid">
-        <article className="panel finance-panel">
+        <article className="panel finance-panel ops-panel">
           <div className="panel__header">
             <div>
-              <p className="eyebrow">{locale.run.financeEyebrow}</p>
-              <h2>{locale.run.financeHeading}</h2>
+              <p className="eyebrow">{locale.run.businessEyebrow}</p>
+              <h2>{locale.run.businessHeading}</h2>
             </div>
             <p className="news-panel__summary">
-              {locale.run.financeSummary}
+              {activeOpsVenueSummary}
             </p>
           </div>
 
-          <div className="finance-panel__summary">
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.health}</p>
-              <p>{game.health}%</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.bankReserve}</p>
-              <p>{locale.formatMoney(game.bankDeposit)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.outstandingDebt}</p>
-              <p>{locale.formatMoney(game.debt)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.pawnBalance}</p>
-              <p>{locale.formatMoney(game.pawnDebt)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.defenseRating}</p>
-              <p>{defenseRating}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.creditRemaining}</p>
-              <p>{locale.formatMoney(maxBorrow)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.summary.gearValueLabel}</p>
-              <p>{locale.formatMoney(gearValue)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.pawnHeadroom}</p>
-              <p>{locale.formatMoney(maxPawnAdvance)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.nextBankYield}</p>
-              <p>{locale.formatMoney(dailyBankYield)}</p>
-            </div>
-            <div className="finance-summary-card">
-              <p className="meta-label">{locale.run.collectorRisk}</p>
-              <p>{Math.round(debtCollectionChance * 100)}%</p>
-            </div>
+          <div
+            className="ops-venue-tabs"
+            role="tablist"
+            aria-label={locale.run.businessTabsLabel}
+          >
+            <button
+              id={getOpsVenueTabId('market')}
+              type="button"
+              role="tab"
+              aria-selected={activeOpsVenue === 'market'}
+              aria-controls={getOpsVenuePanelId('market')}
+              tabIndex={activeOpsVenue === 'market' ? 0 : -1}
+              className={`ops-venue-tab${
+                activeOpsVenue === 'market' ? ' ops-venue-tab--active' : ''
+              }`}
+              onClick={() => activateOpsVenue('market')}
+              onKeyDown={(event) => handleOpsVenueKeyDown(event, 'market')}
+              ref={(element) => {
+                opsTabRefs.current.market = element
+              }}
+            >
+              {locale.run.blackMarketTab}
+            </button>
+            <button
+              id={getOpsVenueTabId('bank')}
+              type="button"
+              role="tab"
+              aria-selected={activeOpsVenue === 'bank'}
+              aria-controls={getOpsVenuePanelId('bank')}
+              tabIndex={activeOpsVenue === 'bank' ? 0 : -1}
+              className={`ops-venue-tab${
+                activeOpsVenue === 'bank' ? ' ops-venue-tab--active' : ''
+              }`}
+              onClick={() => activateOpsVenue('bank')}
+              onKeyDown={(event) => handleOpsVenueKeyDown(event, 'bank')}
+              ref={(element) => {
+                opsTabRefs.current.bank = element
+              }}
+            >
+              {locale.run.bankTab}
+            </button>
+            <button
+              id={getOpsVenueTabId('pawn')}
+              type="button"
+              role="tab"
+              aria-selected={activeOpsVenue === 'pawn'}
+              aria-controls={getOpsVenuePanelId('pawn')}
+              tabIndex={activeOpsVenue === 'pawn' ? 0 : -1}
+              className={`ops-venue-tab${
+                activeOpsVenue === 'pawn' ? ' ops-venue-tab--active' : ''
+              }`}
+              onClick={() => activateOpsVenue('pawn')}
+              onKeyDown={(event) => handleOpsVenueKeyDown(event, 'pawn')}
+              ref={(element) => {
+                opsTabRefs.current.pawn = element
+              }}
+            >
+              {locale.run.pawnShopTab}
+            </button>
           </div>
 
-          <div className="finance-panel__grid">
-            <label className="finance-control">
-              <span>{locale.run.streetMedicLabel}</span>
-              <div className="finance-control__row finance-control__row--single">
-                <div className="finance-control__readout">
-                  {healthRecoveryAmount > 0
-                    ? `+${healthRecoveryAmount} health`
-                    : `${game.health}%`}
+          <div
+            id={getOpsVenuePanelId('market')}
+            className="ops-venue-panel"
+            role="tabpanel"
+            aria-labelledby={getOpsVenueTabId('market')}
+            hidden={activeOpsVenue !== 'market'}
+          >
+              <div className="finance-panel__summary ops-venue-summary">
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.cheapestLane}</p>
+                  <p>{cheapestOffer?.label ?? locale.run.noOpenMarket}</p>
                 </div>
-                <button
-                  className="ghost-button"
-                  disabled={healthRecoveryAmount <= 0}
-                  onClick={() =>
-                    setGame((current) =>
-                      current ? recoverHealth(current) : current,
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.highestTicket}</p>
+                  <p>
+                    {priciestOffer
+                      ? locale.formatMoney(game.market[priciestOffer.id].price)
+                      : locale.run.noOpenMarket}
+                  </p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.marketPulse}</p>
+                  <p>
+                    {featuredModifierDrug
+                      ? featuredMarketEvent
+                        ? locale.formatMarketEventKind(featuredMarketEvent.kind)
+                        : locale.formatMarketModifier(game.market[featuredModifierDrug.id].modifier)
+                      : locale.run.marketPulseIdle}
+                  </p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.bagLeader}</p>
+                  <p>{inventoryLeaderDrug?.label ?? locale.run.emptyStash}</p>
+                </div>
+              </div>
+
+              <section className="market-panel market-panel--embedded">
+                <div className="panel__header market-panel__header">
+                  <div>
+                    <p className="eyebrow">{locale.run.tradingFloorEyebrow}</p>
+                    <h3>{locale.run.marketBoardHeading}</h3>
+                  </div>
+                  <p className="market-panel__note">
+                    {locale.run.marketBoardNote}
+                  </p>
+                </div>
+
+                <div className="offer-grid">
+                  {drugs.map((drug) => {
+                    const offer = game.market[drug.id]
+                    const inventory = game.inventory[drug.id]
+                    const maxBuy = getMaxBuyQuantity(game, drug.id)
+                    const maxSell = getMaxSellQuantity(game, drug.id)
+                    const draftQuantity = parsePositiveInteger(tradeDrafts[drug.id])
+                    const hint = tradeHint(draftQuantity, maxBuy, maxSell, offer.available)
+                    const badgeLabel =
+                      offer.available
+                        ? offer.event
+                          ? locale.formatMarketEventKind(offer.event.kind)
+                          : locale.formatMarketModifier(offer.modifier)
+                        : locale.run.hidden
+                    const badgeClassName = `offer-card__badge${
+                      offer.available && offer.event
+                        ? ` offer-card__badge--${offer.event.kind}`
+                        : offer.available && offer.modifier !== 'standard'
+                          ? ` offer-card__badge--${offer.modifier}`
+                          : ''
+                    }`
+                    const buyDisabled =
+                      !offer.available ||
+                      draftQuantity === null ||
+                      draftQuantity > maxBuy
+                    const sellDisabled =
+                      maxSell === 0 ||
+                      draftQuantity === null ||
+                      draftQuantity > maxSell
+
+                    return (
+                      <article
+                        key={drug.id}
+                        className={`offer-card${
+                          offer.available ? '' : ' offer-card--muted'
+                        }`}
+                        style={
+                          {
+                            '--offer-accent': drug.accent,
+                            '--offer-glow': `${drug.accent}33`,
+                          } as CSSProperties
+                        }
+                      >
+                        <div className="offer-card__top">
+                          <div>
+                            <p className="offer-card__kicker">{drug.flavor}</p>
+                            <h3>{drug.label}</h3>
+                          </div>
+                          <div className="offer-card__price-block">
+                            <span className="offer-card__price">
+                              {offer.available
+                                ? locale.formatMoney(offer.price)
+                                : locale.run.offMarket}
+                            </span>
+                            <span className={badgeClassName}>{badgeLabel}</span>
+                          </div>
+                        </div>
+
+                        <div className="offer-card__stats">
+                          <span>{locale.run.ownedLabel(inventory)}</span>
+                          <span>
+                            {offer.available
+                              ? locale.run.buyingRoom(maxBuy)
+                              : locale.run.travelElsewhere}
+                          </span>
+                        </div>
+
+                        <label className="trade-field">
+                          <span>{locale.run.quantityLabel}</span>
+                          <input
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            type="text"
+                            value={tradeDrafts[drug.id]}
+                            onChange={(event) => setDraft(drug.id, event.target.value)}
+                          />
+                        </label>
+                        <p
+                          className={`offer-card__hint${
+                            hint.error ? ' offer-card__hint--error' : ''
+                          }`}
+                        >
+                          {hint.text}
+                        </p>
+
+                        <div className="offer-card__actions">
+                          <button
+                            className="ghost-button"
+                            disabled={maxBuy === 0}
+                            onClick={() => fillMaxBuy(drug.id)}
+                          >
+                            {locale.run.maxBuyButton}
+                          </button>
+                          <button
+                            className="accent-button"
+                            disabled={buyDisabled}
+                            onClick={() => commitBuy(drug.id)}
+                          >
+                            {locale.run.buyButton}
+                          </button>
+                          <button
+                            className="ghost-button"
+                            disabled={maxSell === 0}
+                            onClick={() => fillMaxSell(drug.id)}
+                          >
+                            {locale.run.maxSellButton}
+                          </button>
+                          <button
+                            className="accent-button accent-button--secondary"
+                            disabled={sellDisabled}
+                            onClick={() => commitSell(drug.id)}
+                          >
+                            {locale.run.sellButton}
+                          </button>
+                        </div>
+                      </article>
                     )
-                  }
-                >
-                  {locale.run.streetMedicButton}
-                </button>
-              </div>
-              <p className="finance-control__hint">
-                {healthRecoveryAmount > 0
-                  ? locale.run.streetMedicReady(
-                      healthRecoveryAmount,
-                      healthRecoveryCost,
-                    )
-                  : game.health >= GAME_CONFIG.maxHealth
-                    ? locale.run.streetMedicNoNeed
-                    : locale.run.streetMedicNoCash}
-              </p>
-            </label>
-
-            <label className="finance-control">
-              <span>{locale.run.depositLabel}</span>
-              <div className="finance-control__row">
-                <input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={financeDrafts.deposit}
-                  onChange={(event) =>
-                    setFinanceDraft('deposit', event.target.value)
-                  }
-                />
-                <button
-                  className="ghost-button"
-                  disabled={
-                    depositAmount === null ||
-                    maxDeposit <= 0 ||
-                    depositAmount > maxDeposit
-                  }
-                  onClick={() => commitFinanceAction('deposit', depositCash)}
-                >
-                  {locale.run.depositButton}
-                </button>
-              </div>
-              <p
-                className={`finance-control__hint${
-                  depositHint.error ? ' finance-control__hint--error' : ''
-                }`}
-              >
-                {depositHint.text}
-              </p>
-            </label>
-
-            <label className="finance-control">
-              <span>{locale.run.withdrawLabel}</span>
-              <div className="finance-control__row">
-                <input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={financeDrafts.withdraw}
-                  onChange={(event) =>
-                    setFinanceDraft('withdraw', event.target.value)
-                  }
-                />
-                <button
-                  className="ghost-button"
-                  disabled={
-                    withdrawAmount === null ||
-                    maxWithdraw <= 0 ||
-                    withdrawAmount > maxWithdraw
-                  }
-                  onClick={() =>
-                    commitFinanceAction('withdraw', withdrawCash)
-                  }
-                >
-                  {locale.run.withdrawButton}
-                </button>
-              </div>
-              <p
-                className={`finance-control__hint${
-                  withdrawHint.error ? ' finance-control__hint--error' : ''
-                }`}
-              >
-                {withdrawHint.text}
-              </p>
-            </label>
-
-            <label className="finance-control">
-              <span>{locale.run.payDebtLabel}</span>
-              <div className="finance-control__row">
-                <input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={financeDrafts.payDebt}
-                  onChange={(event) =>
-                    setFinanceDraft('payDebt', event.target.value)
-                  }
-                />
-                <button
-                  className="ghost-button"
-                  disabled={
-                    debtPaymentAmount === null ||
-                    maxDebtPayment <= 0 ||
-                    debtPaymentAmount > maxDebtPayment
-                  }
-                  onClick={() => commitFinanceAction('payDebt', payDebt)}
-                >
-                  {locale.run.payDebtButton}
-                </button>
-              </div>
-              <p
-                className={`finance-control__hint${
-                  payDebtHint.error ? ' finance-control__hint--error' : ''
-                }`}
-              >
-                {payDebtHint.text}
-              </p>
-            </label>
-
-            <label className="finance-control">
-              <span>{locale.run.pawnAdvanceLabel}</span>
-              <div className="finance-control__row">
-                <input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={financeDrafts.pawn}
-                  onChange={(event) =>
-                    setFinanceDraft('pawn', event.target.value)
-                  }
-                />
-                <button
-                  className="ghost-button"
-                  disabled={
-                    pawnAmount === null ||
-                    maxPawnAdvance <= 0 ||
-                    pawnAmount > maxPawnAdvance
-                  }
-                  onClick={() => commitFinanceAction('pawn', takePawnAdvance)}
-                >
-                  {locale.run.pawnAdvanceButton}
-                </button>
-              </div>
-              <p
-                className={`finance-control__hint${
-                  pawnHint.error ? ' finance-control__hint--error' : ''
-                }`}
-              >
-                {pawnHint.text}
-              </p>
-            </label>
-
-            <label className="finance-control">
-              <span>{locale.run.payPawnLabel}</span>
-              <div className="finance-control__row">
-                <input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={financeDrafts.payPawn}
-                  onChange={(event) =>
-                    setFinanceDraft('payPawn', event.target.value)
-                  }
-                />
-                <button
-                  className="ghost-button"
-                  disabled={
-                    pawnPaymentAmount === null ||
-                    maxPawnRepayment <= 0 ||
-                    pawnPaymentAmount > maxPawnRepayment
-                  }
-                  onClick={() => commitFinanceAction('payPawn', payPawnDebt)}
-                >
-                  {locale.run.payPawnButton}
-                </button>
-              </div>
-              <p
-                className={`finance-control__hint${
-                  payPawnHint.error ? ' finance-control__hint--error' : ''
-                }`}
-              >
-                {payPawnHint.text}
-              </p>
-            </label>
-
-            <label className="finance-control">
-              <span>{locale.run.borrowLabel}</span>
-              <div className="finance-control__row">
-                <input
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={financeDrafts.borrow}
-                  onChange={(event) =>
-                    setFinanceDraft('borrow', event.target.value)
-                  }
-                />
-                <button
-                  className="ghost-button"
-                  disabled={
-                    borrowAmount === null ||
-                    maxBorrow <= 0 ||
-                    borrowAmount > maxBorrow
-                  }
-                  onClick={() => commitFinanceAction('borrow', borrowMoney)}
-                >
-                  {locale.run.borrowButton}
-                </button>
-              </div>
-              <p
-                className={`finance-control__hint${
-                  borrowHint.error ? ' finance-control__hint--error' : ''
-                }`}
-              >
-                {debtCollectionChance > 0
-                  ? `${borrowHint.text} ${Math.round(debtCollectionChance * 100)}% collector risk on the next move.`
-                  : locale.hints.noCollectorRisk}
-              </p>
-            </label>
-          </div>
-
-          <div className="gear-rack">
-            <div className="panel__header">
-              <div>
-                <p className="eyebrow">{locale.run.gearEyebrow}</p>
-                <h3>{locale.run.gearHeading}</h3>
-              </div>
-              <p className="news-panel__summary">{locale.run.gearSummary}</p>
+                  })}
+                </div>
+              </section>
             </div>
 
-            <div className="gear-rack__grid">
-              {GEAR_ITEMS.map((item) => {
-                const owned = game.gear[item.id]
-                const maxBuy = getMaxGearBuyQuantity(game, item.id)
-                const maxPawn = getMaxGearPawnQuantity(game, item.id)
-                const nextPawnOffer = getNextGearPawnOffer(game, item.id)
+          <div
+            id={getOpsVenuePanelId('bank')}
+            className="ops-venue-panel"
+            role="tabpanel"
+            aria-labelledby={getOpsVenueTabId('bank')}
+            hidden={activeOpsVenue !== 'bank'}
+          >
+              <div className="finance-panel__summary ops-venue-summary">
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.bankReserve}</p>
+                  <p>{locale.formatMoney(game.bankDeposit)}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.outstandingDebt}</p>
+                  <p>{locale.formatMoney(game.debt)}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.creditRemaining}</p>
+                  <p>{locale.formatMoney(maxBorrow)}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.nextBankYield}</p>
+                  <p>{locale.formatMoney(dailyBankYield)}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.collectorRisk}</p>
+                  <p>{Math.round(debtCollectionChance * 100)}%</p>
+                </div>
+              </div>
 
-                return (
-                  <article
-                    key={item.id}
-                    className="gear-card"
-                    style={
-                      {
-                        '--gear-accent': item.accent,
-                        '--gear-glow': `${item.accent}33`,
-                      } as CSSProperties
-                    }
+              <div className="finance-panel__grid">
+                <label className="finance-control">
+                  <span>{locale.run.depositLabel}</span>
+                  <div className="finance-control__row">
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={financeDrafts.deposit}
+                      onChange={(event) =>
+                        setFinanceDraft('deposit', event.target.value)
+                      }
+                    />
+                    <button
+                      className="ghost-button"
+                      disabled={
+                        depositAmount === null ||
+                        maxDeposit <= 0 ||
+                        depositAmount > maxDeposit
+                      }
+                      onClick={() => commitFinanceAction('deposit', depositCash)}
+                    >
+                      {locale.run.depositButton}
+                    </button>
+                  </div>
+                  <p
+                    className={`finance-control__hint${
+                      depositHint.error ? ' finance-control__hint--error' : ''
+                    }`}
                   >
-                    <div className="gear-card__top">
-                      <div>
-                        <p className="gear-card__kicker">{item.flavor}</p>
-                        <h3>{item.label}</h3>
-                      </div>
-                      <span className="gear-card__category">{item.category}</span>
-                    </div>
+                    {depositHint.text}
+                  </p>
+                </label>
 
-                    <div className="gear-card__stats">
-                      <span>{locale.run.gearOwned(owned)}</span>
-                      <span>{locale.run.gearDefense(item.defense)}</span>
-                    </div>
+                <label className="finance-control">
+                  <span>{locale.run.withdrawLabel}</span>
+                  <div className="finance-control__row">
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={financeDrafts.withdraw}
+                      onChange={(event) =>
+                        setFinanceDraft('withdraw', event.target.value)
+                      }
+                    />
+                    <button
+                      className="ghost-button"
+                      disabled={
+                        withdrawAmount === null ||
+                        maxWithdraw <= 0 ||
+                        withdrawAmount > maxWithdraw
+                      }
+                      onClick={() =>
+                        commitFinanceAction('withdraw', withdrawCash)
+                      }
+                    >
+                      {locale.run.withdrawButton}
+                    </button>
+                  </div>
+                  <p
+                    className={`finance-control__hint${
+                      withdrawHint.error ? ' finance-control__hint--error' : ''
+                    }`}
+                  >
+                    {withdrawHint.text}
+                  </p>
+                </label>
 
-                    <p className="gear-card__price">
-                      {locale.formatMoney(item.cost)}
-                    </p>
-                    <p className="gear-card__hint">
-                      {maxPawn > 0
-                        ? locale.run.gearPawnOffer(nextPawnOffer)
-                        : locale.hints.noGearToPawn}
-                    </p>
+                <label className="finance-control">
+                  <span>{locale.run.payDebtLabel}</span>
+                  <div className="finance-control__row">
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={financeDrafts.payDebt}
+                      onChange={(event) =>
+                        setFinanceDraft('payDebt', event.target.value)
+                      }
+                    />
+                    <button
+                      className="ghost-button"
+                      disabled={
+                        debtPaymentAmount === null ||
+                        maxDebtPayment <= 0 ||
+                        debtPaymentAmount > maxDebtPayment
+                      }
+                      onClick={() => commitFinanceAction('payDebt', payDebt)}
+                    >
+                      {locale.run.payDebtButton}
+                    </button>
+                  </div>
+                  <p
+                    className={`finance-control__hint${
+                      payDebtHint.error ? ' finance-control__hint--error' : ''
+                    }`}
+                  >
+                    {payDebtHint.text}
+                  </p>
+                </label>
 
-                    <div className="gear-card__actions">
-                      <button
-                        className="ghost-button"
-                        disabled={maxBuy <= 0}
-                        onClick={() =>
-                          setGame((current) =>
-                            current ? buyGear(current, item.id) : current,
-                          )
-                        }
-                      >
-                        {locale.run.gearBuyButton}
-                      </button>
-                      <button
-                        className="accent-button accent-button--secondary"
-                        disabled={maxPawn <= 0}
-                        onClick={() =>
-                          setGame((current) =>
-                            current ? pawnGear(current, item.id) : current,
-                          )
-                        }
-                      >
-                        {locale.run.gearPawnButton}
-                      </button>
-                    </div>
-                  </article>
-                )
-              })}
+                <label className="finance-control">
+                  <span>{locale.run.borrowLabel}</span>
+                  <div className="finance-control__row">
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={financeDrafts.borrow}
+                      onChange={(event) =>
+                        setFinanceDraft('borrow', event.target.value)
+                      }
+                    />
+                    <button
+                      className="ghost-button"
+                      disabled={
+                        borrowAmount === null ||
+                        maxBorrow <= 0 ||
+                        borrowAmount > maxBorrow
+                      }
+                      onClick={() => commitFinanceAction('borrow', borrowMoney)}
+                    >
+                      {locale.run.borrowButton}
+                    </button>
+                  </div>
+                  <p
+                    className={`finance-control__hint${
+                      borrowHint.error ? ' finance-control__hint--error' : ''
+                    }`}
+                  >
+                    {debtCollectionChance > 0
+                      ? `${borrowHint.text} ${Math.round(debtCollectionChance * 100)}% collector risk on the next move.`
+                      : locale.hints.noCollectorRisk}
+                  </p>
+                </label>
+              </div>
             </div>
-          </div>
+
+          <div
+            id={getOpsVenuePanelId('pawn')}
+            className="ops-venue-panel"
+            role="tabpanel"
+            aria-labelledby={getOpsVenueTabId('pawn')}
+            hidden={activeOpsVenue !== 'pawn'}
+          >
+              <div className="finance-panel__summary ops-venue-summary">
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.health}</p>
+                  <p>{game.health}%</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.pawnBalance}</p>
+                  <p>{locale.formatMoney(game.pawnDebt)}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.pawnHeadroom}</p>
+                  <p>{locale.formatMoney(maxPawnAdvance)}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.run.defenseRating}</p>
+                  <p>{defenseRating}</p>
+                </div>
+                <div className="finance-summary-card">
+                  <p className="meta-label">{locale.summary.gearValueLabel}</p>
+                  <p>{locale.formatMoney(gearValue)}</p>
+                </div>
+              </div>
+
+              <div className="finance-panel__grid">
+                <label className="finance-control">
+                  <span>{locale.run.streetMedicLabel}</span>
+                  <div className="finance-control__row finance-control__row--single">
+                    <div className="finance-control__readout">
+                      {healthRecoveryAmount > 0
+                        ? `+${healthRecoveryAmount} health`
+                        : `${game.health}%`}
+                    </div>
+                    <button
+                      className="ghost-button"
+                      disabled={healthRecoveryAmount <= 0}
+                      onClick={() =>
+                        setGame((current) =>
+                          current ? recoverHealth(current) : current,
+                        )
+                      }
+                    >
+                      {locale.run.streetMedicButton}
+                    </button>
+                  </div>
+                  <p className="finance-control__hint">
+                    {healthRecoveryAmount > 0
+                      ? locale.run.streetMedicReady(
+                          healthRecoveryAmount,
+                          healthRecoveryCost,
+                        )
+                      : game.health >= GAME_CONFIG.maxHealth
+                        ? locale.run.streetMedicNoNeed
+                        : locale.run.streetMedicNoCash}
+                  </p>
+                </label>
+
+                <label className="finance-control">
+                  <span>{locale.run.pawnAdvanceLabel}</span>
+                  <div className="finance-control__row">
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={financeDrafts.pawn}
+                      onChange={(event) =>
+                        setFinanceDraft('pawn', event.target.value)
+                      }
+                    />
+                    <button
+                      className="ghost-button"
+                      disabled={
+                        pawnAmount === null ||
+                        maxPawnAdvance <= 0 ||
+                        pawnAmount > maxPawnAdvance
+                      }
+                      onClick={() => commitFinanceAction('pawn', takePawnAdvance)}
+                    >
+                      {locale.run.pawnAdvanceButton}
+                    </button>
+                  </div>
+                  <p
+                    className={`finance-control__hint${
+                      pawnHint.error ? ' finance-control__hint--error' : ''
+                    }`}
+                  >
+                    {pawnHint.text}
+                  </p>
+                </label>
+
+                <label className="finance-control">
+                  <span>{locale.run.payPawnLabel}</span>
+                  <div className="finance-control__row">
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={financeDrafts.payPawn}
+                      onChange={(event) =>
+                        setFinanceDraft('payPawn', event.target.value)
+                      }
+                    />
+                    <button
+                      className="ghost-button"
+                      disabled={
+                        pawnPaymentAmount === null ||
+                        maxPawnRepayment <= 0 ||
+                        pawnPaymentAmount > maxPawnRepayment
+                      }
+                      onClick={() => commitFinanceAction('payPawn', payPawnDebt)}
+                    >
+                      {locale.run.payPawnButton}
+                    </button>
+                  </div>
+                  <p
+                    className={`finance-control__hint${
+                      payPawnHint.error ? ' finance-control__hint--error' : ''
+                    }`}
+                  >
+                    {payPawnHint.text}
+                  </p>
+                </label>
+              </div>
+
+              <div className="gear-rack">
+                <div className="panel__header">
+                  <div>
+                    <p className="eyebrow">{locale.run.gearEyebrow}</p>
+                    <h3>{locale.run.gearHeading}</h3>
+                  </div>
+                  <p className="news-panel__summary">{locale.run.gearSummary}</p>
+                </div>
+
+                <div className="gear-rack__grid">
+                  {GEAR_ITEMS.map((item) => {
+                    const owned = game.gear[item.id]
+                    const maxBuy = getMaxGearBuyQuantity(game, item.id)
+                    const maxPawn = getMaxGearPawnQuantity(game, item.id)
+                    const nextPawnOffer = getNextGearPawnOffer(game, item.id)
+
+                    return (
+                      <article
+                        key={item.id}
+                        className="gear-card"
+                        style={
+                          {
+                            '--gear-accent': item.accent,
+                            '--gear-glow': `${item.accent}33`,
+                          } as CSSProperties
+                        }
+                      >
+                        <div className="gear-card__top">
+                          <div>
+                            <p className="gear-card__kicker">{item.flavor}</p>
+                            <h3>{item.label}</h3>
+                          </div>
+                          <span className="gear-card__category">{item.category}</span>
+                        </div>
+
+                        <div className="gear-card__stats">
+                          <span>{locale.run.gearOwned(owned)}</span>
+                          <span>{locale.run.gearDefense(item.defense)}</span>
+                        </div>
+
+                        <p className="gear-card__price">
+                          {locale.formatMoney(item.cost)}
+                        </p>
+                        <p className="gear-card__hint">
+                          {maxPawn > 0
+                            ? locale.run.gearPawnOffer(nextPawnOffer)
+                            : locale.hints.noGearToPawn}
+                        </p>
+
+                        <div className="gear-card__actions">
+                          <button
+                            className="ghost-button"
+                            disabled={maxBuy <= 0}
+                            onClick={() =>
+                              setGame((current) =>
+                                current ? buyGear(current, item.id) : current,
+                              )
+                            }
+                          >
+                            {locale.run.gearBuyButton}
+                          </button>
+                          <button
+                            className="accent-button accent-button--secondary"
+                            disabled={maxPawn <= 0}
+                            onClick={() =>
+                              setGame((current) =>
+                                current ? pawnGear(current, item.id) : current,
+                              )
+                            }
+                          >
+                            {locale.run.gearPawnButton}
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
         </article>
 
         <aside className="panel activity-panel">
@@ -1666,137 +1984,6 @@ function App() {
         </aside>
       </section>
 
-      <section className="panel market-panel">
-        <div className="panel__header market-panel__header">
-          <div>
-            <p className="eyebrow">{locale.run.tradingFloorEyebrow}</p>
-            <h2>{locale.run.marketBoardHeading}</h2>
-          </div>
-          <p className="market-panel__note">
-            {locale.run.marketBoardNote}
-          </p>
-        </div>
-
-        <div className="offer-grid">
-          {drugs.map((drug) => {
-            const offer = game.market[drug.id]
-            const inventory = game.inventory[drug.id]
-            const maxBuy = getMaxBuyQuantity(game, drug.id)
-            const maxSell = getMaxSellQuantity(game, drug.id)
-            const draftQuantity = parsePositiveInteger(tradeDrafts[drug.id])
-            const hint = tradeHint(draftQuantity, maxBuy, maxSell, offer.available)
-            const badgeLabel =
-              offer.available
-                ? offer.event
-                  ? locale.formatMarketEventKind(offer.event.kind)
-                  : locale.formatMarketModifier(offer.modifier)
-                : locale.run.hidden
-            const badgeClassName = `offer-card__badge${
-              offer.available && offer.event
-                ? ` offer-card__badge--${offer.event.kind}`
-                : offer.available && offer.modifier !== 'standard'
-                  ? ` offer-card__badge--${offer.modifier}`
-                  : ''
-            }`
-            const buyDisabled =
-              !offer.available ||
-              draftQuantity === null ||
-              draftQuantity > maxBuy
-            const sellDisabled =
-              maxSell === 0 ||
-              draftQuantity === null ||
-              draftQuantity > maxSell
-
-            return (
-              <article
-                key={drug.id}
-                className={`offer-card${
-                  offer.available ? '' : ' offer-card--muted'
-                }`}
-                style={
-                  {
-                    '--offer-accent': drug.accent,
-                    '--offer-glow': `${drug.accent}33`,
-                  } as CSSProperties
-                }
-              >
-                <div className="offer-card__top">
-                  <div>
-                    <p className="offer-card__kicker">{drug.flavor}</p>
-                    <h3>{drug.label}</h3>
-                  </div>
-                  <div className="offer-card__price-block">
-                    <span className="offer-card__price">
-                      {offer.available
-                        ? locale.formatMoney(offer.price)
-                        : locale.run.offMarket}
-                    </span>
-                    <span className={badgeClassName}>{badgeLabel}</span>
-                  </div>
-                </div>
-
-                <div className="offer-card__stats">
-                  <span>{locale.run.ownedLabel(inventory)}</span>
-                  <span>
-                    {offer.available
-                      ? locale.run.buyingRoom(maxBuy)
-                      : locale.run.travelElsewhere}
-                  </span>
-                </div>
-
-                <label className="trade-field">
-                  <span>{locale.run.quantityLabel}</span>
-                  <input
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    type="text"
-                    value={tradeDrafts[drug.id]}
-                    onChange={(event) => setDraft(drug.id, event.target.value)}
-                  />
-                </label>
-                <p
-                  className={`offer-card__hint${
-                    hint.error ? ' offer-card__hint--error' : ''
-                  }`}
-                >
-                  {hint.text}
-                </p>
-
-                <div className="offer-card__actions">
-                  <button
-                    className="ghost-button"
-                    disabled={maxBuy === 0}
-                    onClick={() => fillMaxBuy(drug.id)}
-                  >
-                    {locale.run.maxBuyButton}
-                  </button>
-                  <button
-                    className="accent-button"
-                    disabled={buyDisabled}
-                    onClick={() => commitBuy(drug.id)}
-                  >
-                    {locale.run.buyButton}
-                  </button>
-                  <button
-                    className="ghost-button"
-                    disabled={maxSell === 0}
-                    onClick={() => fillMaxSell(drug.id)}
-                  >
-                    {locale.run.maxSellButton}
-                  </button>
-                  <button
-                    className="accent-button accent-button--secondary"
-                    disabled={sellDisabled}
-                    onClick={() => commitSell(drug.id)}
-                  >
-                    {locale.run.sellButton}
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      </section>
       </main>
     </>
   )

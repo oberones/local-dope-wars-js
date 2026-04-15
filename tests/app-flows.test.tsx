@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import App from '../src/App'
@@ -41,6 +41,39 @@ describe('app browser flows', () => {
     await user.click(screen.getByRole('button', { name: 'Save and exit' }))
 
     expect(await screen.findByRole('button', { name: 'Continue saved run' })).toBeTruthy()
+  })
+
+  it('separates business actions into black market, bank, and pawn shop tabs', async () => {
+    const { user } = renderApp()
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Start new run',
+      }),
+    )
+
+    expect(
+      await screen.findByRole('tab', { name: 'Black market', selected: true }),
+    ).toBeTruthy()
+    const marketPanel = await screen.findByRole('tabpanel', { name: 'Black market' })
+    expect(within(marketPanel).getAllByRole('button', { name: 'Buy' }).length).toBeGreaterThan(0)
+    expect(within(marketPanel).queryByRole('button', { name: 'Deposit' })).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Bank' }))
+
+    expect(await screen.findByRole('tab', { name: 'Bank', selected: true })).toBeTruthy()
+    const bankPanel = await screen.findByRole('tabpanel', { name: 'Bank' })
+    expect(within(bankPanel).getByRole('button', { name: 'Deposit' })).toBeTruthy()
+    expect(within(bankPanel).queryByRole('button', { name: 'Patch up' })).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Pawn shop' }))
+
+    expect(
+      await screen.findByRole('tab', { name: 'Pawn shop', selected: true }),
+    ).toBeTruthy()
+    const pawnPanel = await screen.findByRole('tabpanel', { name: 'Pawn shop' })
+    expect(within(pawnPanel).getByText('Patch up')).toBeTruthy()
+    expect(within(pawnPanel).queryByRole('button', { name: 'Borrow' })).toBeNull()
   })
 
   it('continues a final-day saved run and finalizes it through the summary screen', async () => {
