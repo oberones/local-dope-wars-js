@@ -135,7 +135,7 @@ When asked to create a commit:
 - A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
 - Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, and debt-collector pressure are now live, but longer-term health/combat systems are still pending.
 - A typed event spotlight layer now drives popup windows for market shocks, collectors, and travel encounters, with room for future illustrated encounter art.
-- A basic Vitest regression suite now covers core content-pack, travel, market-event, finance-pressure, and pawn-flow behavior.
+- A growing Vitest regression suite now covers core content-pack, travel, market-event, finance-pressure, pawn-flow, and storage/save normalization behavior.
 - Save/load depth, weapons, deeper pawn/bank systems, and endgame polish are still pending.
 
 ## Good Next Steps
