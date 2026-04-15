@@ -25,6 +25,10 @@ import type {
 
 const locale = DEFAULT_LOCALE
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled pending encounter: ${String(value)}`)
+}
+
 function randomInt(min: number, max: number) {
   return min + Math.floor(Math.random() * (max - min + 1))
 }
@@ -852,270 +856,293 @@ export function resolvePendingEncounter(
   }
   const defenseRating = getDefenseRating(clearedState)
 
-  if (encounter.kind === 'cop-stop' && choice === 'flee') {
-    const healthLoss = Math.min(
-      clearedState.health,
-      getMitigatedDamage(encounter.baseDamage, defenseRating),
-    )
-    const nextState: GameState = {
-      ...clearedState,
-      health: Math.max(clearedState.health - healthLoss, 0),
-    }
-
-    return applyUpdates(nextState, {
-      news: [
-        {
-          tone: 'encounter',
-          text: locale.game.fledCopStopNews(healthLoss),
-        },
-      ],
-      activity: [
-        createActivity(
-          nextState,
-          'encounter',
-          locale.game.fledCopStopTitle,
-          locale.game.fledCopStopDetail(encounter.cityLabel, nextState.health),
-        ),
-      ],
-    })
-  }
-
-  if (encounter.kind === 'cop-stop' && choice === 'surrender') {
-    const cashLost = Math.min(clearedState.cash, encounter.cashDemand)
-    const healthLoss =
-      cashLost < encounter.cashDemand ?
-        Math.min(
+  switch (encounter.kind) {
+    case 'cop-stop':
+      if (choice === 'flee') {
+        const healthLoss = Math.min(
           clearedState.health,
-          getMitigatedDamage(GAME_CONFIG.copStopSurrenderDamage, defenseRating),
+          getMitigatedDamage(encounter.baseDamage, defenseRating),
         )
-      : 0
-    const nextState: GameState = {
-      ...clearedState,
-      cash: clearedState.cash - cashLost,
-      health: Math.max(clearedState.health - healthLoss, 0),
-    }
+        const nextState: GameState = {
+          ...clearedState,
+          health: Math.max(clearedState.health - healthLoss, 0),
+        }
 
-    return applyUpdates(nextState, {
-      news: [
-        {
-          tone: 'encounter',
-          text: locale.game.surrenderedCopStopNews(cashLost, healthLoss),
-        },
-      ],
-      activity: [
-        createActivity(
-          nextState,
-          'encounter',
-          locale.game.surrenderedCopStopTitle,
-          locale.game.surrenderedCopStopDetail(encounter.cityLabel, cashLost, nextState.health),
-        ),
-      ],
-    })
-  }
-
-  if (encounter.kind === 'cop-stop') {
-    const fightSuccess = Math.random() <
-      getFightSuccessChance(clearedState, getCurrentCity(clearedState).cops)
-
-    if (fightSuccess) {
-      const healthLoss = Math.min(
-        clearedState.health,
-        getMitigatedDamage(
-          Math.max(encounter.baseDamage - GAME_CONFIG.copStopFightDamageRelief, 1),
-          defenseRating,
-        ),
-      )
-      const nextState: GameState = {
-        ...clearedState,
-        health: Math.max(clearedState.health - healthLoss, 0),
+        return applyUpdates(nextState, {
+          news: [
+            {
+              tone: 'encounter',
+              text: locale.game.fledCopStopNews(healthLoss),
+            },
+          ],
+          activity: [
+            createActivity(
+              nextState,
+              'encounter',
+              locale.game.fledCopStopTitle,
+              locale.game.fledCopStopDetail(encounter.cityLabel, nextState.health),
+            ),
+          ],
+        })
       }
 
-      return applyUpdates(nextState, {
-        news: [
-          {
-            tone: 'encounter',
-            text: locale.game.wonCopFightNews(healthLoss),
-          },
-        ],
-        activity: [
-          createActivity(
-            nextState,
-            'encounter',
-            locale.game.wonCopFightTitle,
-            locale.game.wonCopFightDetail(encounter.cityLabel, nextState.health),
-          ),
-        ],
-      })
-    }
+      if (choice === 'surrender') {
+        const cashLost = Math.min(clearedState.cash, encounter.cashDemand)
+        const healthLoss =
+          cashLost < encounter.cashDemand ?
+            Math.min(
+              clearedState.health,
+              getMitigatedDamage(GAME_CONFIG.copStopSurrenderDamage, defenseRating),
+            )
+          : 0
+        const nextState: GameState = {
+          ...clearedState,
+          cash: clearedState.cash - cashLost,
+          health: Math.max(clearedState.health - healthLoss, 0),
+        }
 
-    const healthLoss = Math.min(
-      clearedState.health,
-      getMitigatedDamage(encounter.baseDamage + GAME_CONFIG.copStopFightDamagePenalty, defenseRating),
-    )
-    const cashLost = Math.min(clearedState.cash, Math.round(encounter.cashDemand * 0.5))
-    const nextState: GameState = {
-      ...clearedState,
-      cash: clearedState.cash - cashLost,
-      health: Math.max(clearedState.health - healthLoss, 0),
-    }
+        return applyUpdates(nextState, {
+          news: [
+            {
+              tone: 'encounter',
+              text: locale.game.surrenderedCopStopNews(cashLost, healthLoss),
+            },
+          ],
+          activity: [
+            createActivity(
+              nextState,
+              'encounter',
+              locale.game.surrenderedCopStopTitle,
+              locale.game.surrenderedCopStopDetail(
+                encounter.cityLabel,
+                cashLost,
+                nextState.health,
+              ),
+            ),
+          ],
+        })
+      }
 
-    return applyUpdates(nextState, {
-      news: [
-        {
-          tone: 'encounter',
-          text: locale.game.lostCopFightNews(cashLost, healthLoss),
-        },
-      ],
-      activity: [
-        createActivity(
-          nextState,
-          'encounter',
-          locale.game.lostCopFightTitle,
-          locale.game.lostCopFightDetail(encounter.cityLabel, cashLost, nextState.health),
-        ),
-      ],
-    })
-  }
-
-  if (choice === 'flee') {
-    const healthLoss = Math.min(
-      clearedState.health,
-      getMitigatedDamage(encounter.baseDamage, defenseRating),
-    )
-    const nextState: GameState = {
-      ...clearedState,
-      health: Math.max(clearedState.health - healthLoss, 0),
-    }
-
-    return applyUpdates(nextState, {
-      news: [
-        {
-          tone: 'encounter',
-          text: locale.game.fledJackerNews(healthLoss),
-        },
-      ],
-      activity: [
-        createActivity(
-          nextState,
-          'encounter',
-          locale.game.fledJackerTitle,
-          locale.game.fledJackerDetail(encounter.cityLabel, nextState.health),
-        ),
-      ],
-    })
-  }
-
-  if (choice === 'surrender') {
-    const quantityLost = Math.min(
-      clearedState.inventory[encounter.drugId],
-      encounter.quantityDemand,
-    )
-    const nextState: GameState = {
-      ...clearedState,
-      inventory: {
-        ...clearedState.inventory,
-        [encounter.drugId]: clearedState.inventory[encounter.drugId] - quantityLost,
-      },
-    }
-
-    return applyUpdates(nextState, {
-      news: [
-        {
-          tone: 'encounter',
-          text: locale.game.surrenderedJackerNews(quantityLost, encounter.drugLabel),
-        },
-      ],
-      activity: [
-        createActivity(
-          nextState,
-          'encounter',
-          locale.game.surrenderedJackerTitle,
-          locale.game.surrenderedJackerDetail(
-            encounter.cityLabel,
-            quantityLost,
-            encounter.drugLabel,
-          ),
-        ),
-      ],
-    })
-  }
-
-  const fightSuccess = Math.random() <
-    getFightSuccessChance(
-      clearedState,
-      getCurrentCity(clearedState).cops,
-      GAME_CONFIG.jackerFightChanceBonus,
-    )
-
-  if (fightSuccess) {
-    const healthLoss = Math.min(
-      clearedState.health,
-      getMitigatedDamage(
-        Math.max(encounter.baseDamage - GAME_CONFIG.jackerFightDamageRelief, 1),
-        defenseRating,
-      ),
-    )
-    const nextState: GameState = {
-      ...clearedState,
-      health: Math.max(clearedState.health - healthLoss, 0),
-    }
-
-    return applyUpdates(nextState, {
-      news: [
-        {
-          tone: 'encounter',
-          text: locale.game.wonJackerFightNews(healthLoss),
-        },
-      ],
-      activity: [
-        createActivity(
-          nextState,
-          'encounter',
-          locale.game.wonJackerFightTitle,
-          locale.game.wonJackerFightDetail(encounter.cityLabel, nextState.health),
-        ),
-      ],
-    })
-  }
-
-  const healthLoss = Math.min(
-    clearedState.health,
-    getMitigatedDamage(encounter.baseDamage + GAME_CONFIG.jackerFightDamagePenalty, defenseRating),
-  )
-  const quantityLost = Math.min(
-    clearedState.inventory[encounter.drugId],
-    encounter.quantityDemand,
-  )
-  const nextState: GameState = {
-    ...clearedState,
-    health: Math.max(clearedState.health - healthLoss, 0),
-    inventory: {
-      ...clearedState.inventory,
-      [encounter.drugId]: clearedState.inventory[encounter.drugId] - quantityLost,
-    },
-  }
-
-  return applyUpdates(nextState, {
-    news: [
       {
-        tone: 'encounter',
-        text: locale.game.lostJackerFightNews(quantityLost, encounter.drugLabel, healthLoss),
-      },
-    ],
-    activity: [
-      createActivity(
-        nextState,
-        'encounter',
-        locale.game.lostJackerFightTitle,
-        locale.game.lostJackerFightDetail(
-          encounter.cityLabel,
-          quantityLost,
-          encounter.drugLabel,
-          nextState.health,
-        ),
-      ),
-    ],
-  })
+        const fightSuccess = Math.random() <
+          getFightSuccessChance(clearedState, getCurrentCity(clearedState).cops)
+
+        if (fightSuccess) {
+          const healthLoss = Math.min(
+            clearedState.health,
+            getMitigatedDamage(
+              Math.max(encounter.baseDamage - GAME_CONFIG.copStopFightDamageRelief, 1),
+              defenseRating,
+            ),
+          )
+          const nextState: GameState = {
+            ...clearedState,
+            health: Math.max(clearedState.health - healthLoss, 0),
+          }
+
+          return applyUpdates(nextState, {
+            news: [
+              {
+                tone: 'encounter',
+                text: locale.game.wonCopFightNews(healthLoss),
+              },
+            ],
+            activity: [
+              createActivity(
+                nextState,
+                'encounter',
+                locale.game.wonCopFightTitle,
+                locale.game.wonCopFightDetail(encounter.cityLabel, nextState.health),
+              ),
+            ],
+          })
+        }
+
+        const healthLoss = Math.min(
+          clearedState.health,
+          getMitigatedDamage(
+            encounter.baseDamage + GAME_CONFIG.copStopFightDamagePenalty,
+            defenseRating,
+          ),
+        )
+        const cashLost = Math.min(clearedState.cash, Math.round(encounter.cashDemand * 0.5))
+        const nextState: GameState = {
+          ...clearedState,
+          cash: clearedState.cash - cashLost,
+          health: Math.max(clearedState.health - healthLoss, 0),
+        }
+
+        return applyUpdates(nextState, {
+          news: [
+            {
+              tone: 'encounter',
+              text: locale.game.lostCopFightNews(cashLost, healthLoss),
+            },
+          ],
+          activity: [
+            createActivity(
+              nextState,
+              'encounter',
+              locale.game.lostCopFightTitle,
+              locale.game.lostCopFightDetail(encounter.cityLabel, cashLost, nextState.health),
+            ),
+          ],
+        })
+      }
+
+    case 'jacker-ambush':
+      if (choice === 'flee') {
+        const healthLoss = Math.min(
+          clearedState.health,
+          getMitigatedDamage(encounter.baseDamage, defenseRating),
+        )
+        const nextState: GameState = {
+          ...clearedState,
+          health: Math.max(clearedState.health - healthLoss, 0),
+        }
+
+        return applyUpdates(nextState, {
+          news: [
+            {
+              tone: 'encounter',
+              text: locale.game.fledJackerNews(healthLoss),
+            },
+          ],
+          activity: [
+            createActivity(
+              nextState,
+              'encounter',
+              locale.game.fledJackerTitle,
+              locale.game.fledJackerDetail(encounter.cityLabel, nextState.health),
+            ),
+          ],
+        })
+      }
+
+      if (choice === 'surrender') {
+        const quantityLost = Math.min(
+          clearedState.inventory[encounter.drugId],
+          encounter.quantityDemand,
+        )
+        const nextState: GameState = {
+          ...clearedState,
+          inventory: {
+            ...clearedState.inventory,
+            [encounter.drugId]: clearedState.inventory[encounter.drugId] - quantityLost,
+          },
+        }
+
+        return applyUpdates(nextState, {
+          news: [
+            {
+              tone: 'encounter',
+              text: locale.game.surrenderedJackerNews(quantityLost, encounter.drugLabel),
+            },
+          ],
+          activity: [
+            createActivity(
+              nextState,
+              'encounter',
+              locale.game.surrenderedJackerTitle,
+              locale.game.surrenderedJackerDetail(
+                encounter.cityLabel,
+                quantityLost,
+                encounter.drugLabel,
+              ),
+            ),
+          ],
+        })
+      }
+
+      {
+        const fightSuccess = Math.random() <
+          getFightSuccessChance(
+            clearedState,
+            getCurrentCity(clearedState).cops,
+            GAME_CONFIG.jackerFightChanceBonus,
+          )
+
+        if (fightSuccess) {
+          const healthLoss = Math.min(
+            clearedState.health,
+            getMitigatedDamage(
+              Math.max(encounter.baseDamage - GAME_CONFIG.jackerFightDamageRelief, 1),
+              defenseRating,
+            ),
+          )
+          const nextState: GameState = {
+            ...clearedState,
+            health: Math.max(clearedState.health - healthLoss, 0),
+          }
+
+          return applyUpdates(nextState, {
+            news: [
+              {
+                tone: 'encounter',
+                text: locale.game.wonJackerFightNews(healthLoss),
+              },
+            ],
+            activity: [
+              createActivity(
+                nextState,
+                'encounter',
+                locale.game.wonJackerFightTitle,
+                locale.game.wonJackerFightDetail(encounter.cityLabel, nextState.health),
+              ),
+            ],
+          })
+        }
+
+        const healthLoss = Math.min(
+          clearedState.health,
+          getMitigatedDamage(
+            encounter.baseDamage + GAME_CONFIG.jackerFightDamagePenalty,
+            defenseRating,
+          ),
+        )
+        const quantityLost = Math.min(
+          clearedState.inventory[encounter.drugId],
+          encounter.quantityDemand,
+        )
+        const nextState: GameState = {
+          ...clearedState,
+          health: Math.max(clearedState.health - healthLoss, 0),
+          inventory: {
+            ...clearedState.inventory,
+            [encounter.drugId]: clearedState.inventory[encounter.drugId] - quantityLost,
+          },
+        }
+
+        return applyUpdates(nextState, {
+          news: [
+            {
+              tone: 'encounter',
+              text: locale.game.lostJackerFightNews(
+                quantityLost,
+                encounter.drugLabel,
+                healthLoss,
+              ),
+            },
+          ],
+          activity: [
+            createActivity(
+              nextState,
+              'encounter',
+              locale.game.lostJackerFightTitle,
+              locale.game.lostJackerFightDetail(
+                encounter.cityLabel,
+                quantityLost,
+                encounter.drugLabel,
+                nextState.health,
+              ),
+            ),
+          ],
+        })
+      }
+
+    default:
+      return assertNever(encounter)
+  }
 }
 
 export function getInventoryValue(state: GameState) {

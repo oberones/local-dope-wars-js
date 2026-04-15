@@ -68,6 +68,10 @@ type AppScreen = 'menu' | 'run' | 'summary'
 type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'pawn' | 'payPawn' | 'borrow'
 const locale = DEFAULT_LOCALE
 
+function assertNever(value: never): never {
+  throw new Error(`Unhandled pending encounter: ${String(value)}`)
+}
+
 function createTradeDrafts(drugIds = DEFAULT_CONTENT_PACK.drugs.map((drug) => drug.id)) {
   return drugIds.reduce(
     (drafts, drug) => {
@@ -214,34 +218,37 @@ function getPendingEncounterSpotlight(
     return existingSpotlight
   }
 
-  if (encounter.kind === 'cop-stop') {
-    return {
-      tone: 'encounter' as const,
-      title: locale.game.copStopTitle,
-      detail: locale.game.copStopDetail(encounter.cityLabel, encounter.cashDemand),
-      artKey: 'rough-stop' as const,
-      artLabel: 'Rough stop',
-      decision: {
-        kind: 'cop-stop' as const,
-        choices: ['flee', 'fight', 'surrender'] as const,
-      },
-    }
-  }
-
-  return {
-    tone: 'encounter' as const,
-    title: locale.game.jackerAmbushTitle,
-    detail: locale.game.jackerAmbushDetail(
-      encounter.cityLabel,
-      encounter.quantityDemand,
-      encounter.drugLabel,
-    ),
-    artKey: 'jacker-ambush' as const,
-    artLabel: 'Rival crew',
-    decision: {
-      kind: 'jacker-ambush' as const,
-      choices: ['flee', 'fight', 'surrender'] as const,
-    },
+  switch (encounter.kind) {
+    case 'cop-stop':
+      return {
+        tone: 'encounter' as const,
+        title: locale.game.copStopTitle,
+        detail: locale.game.copStopDetail(encounter.cityLabel, encounter.cashDemand),
+        artKey: 'rough-stop' as const,
+        artLabel: 'Rough stop',
+        decision: {
+          kind: 'cop-stop' as const,
+          choices: ['flee', 'fight', 'surrender'] as const,
+        },
+      }
+    case 'jacker-ambush':
+      return {
+        tone: 'encounter' as const,
+        title: locale.game.jackerAmbushTitle,
+        detail: locale.game.jackerAmbushDetail(
+          encounter.cityLabel,
+          encounter.quantityDemand,
+          encounter.drugLabel,
+        ),
+        artKey: 'jacker-ambush' as const,
+        artLabel: 'Rival crew',
+        decision: {
+          kind: 'jacker-ambush' as const,
+          choices: ['flee', 'fight', 'surrender'] as const,
+        },
+      }
+    default:
+      return assertNever(encounter)
   }
 }
 
