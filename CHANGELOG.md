@@ -1,3 +1,13 @@
+## 0.4.0 (2026-04-14)
+
+### Feat
+
+- add event spotlight popups
+
+### Fix
+
+- harden event spotlight accessibility
+
 ## 0.3.0 (2026-04-14)
 
 ### Feat
