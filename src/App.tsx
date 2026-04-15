@@ -206,22 +206,40 @@ function getPendingSpotlights(
     .sort((left, right) => left.id - right.id)
 }
 
-function getCopStopSpotlight(
+function getPendingEncounterSpotlight(
   encounter: PendingEncounter,
   existingSpotlight?: EventSpotlight,
 ) {
-  if (existingSpotlight?.decision?.kind === 'cop-stop') {
+  if (existingSpotlight?.decision?.kind === encounter.kind) {
     return existingSpotlight
+  }
+
+  if (encounter.kind === 'cop-stop') {
+    return {
+      tone: 'encounter' as const,
+      title: locale.game.copStopTitle,
+      detail: locale.game.copStopDetail(encounter.cityLabel, encounter.cashDemand),
+      artKey: 'rough-stop' as const,
+      artLabel: 'Rough stop',
+      decision: {
+        kind: 'cop-stop' as const,
+        choices: ['flee', 'fight', 'surrender'] as const,
+      },
+    }
   }
 
   return {
     tone: 'encounter' as const,
-    title: locale.game.copStopTitle,
-    detail: locale.game.copStopDetail(encounter.cityLabel, encounter.cashDemand),
-    artKey: 'rough-stop' as const,
-    artLabel: 'Rough stop',
+    title: locale.game.jackerAmbushTitle,
+    detail: locale.game.jackerAmbushDetail(
+      encounter.cityLabel,
+      encounter.quantityDemand,
+      encounter.drugLabel,
+    ),
+    artKey: 'jacker-ambush' as const,
+    artLabel: 'Rival crew',
     decision: {
-      kind: 'cop-stop' as const,
+      kind: 'jacker-ambush' as const,
       choices: ['flee', 'fight', 'surrender'] as const,
     },
   }
@@ -331,7 +349,7 @@ function App() {
   const activeSpotlight =
     game?.pendingEncounter ?
       {
-        ...getCopStopSpotlight(game.pendingEncounter, pendingEncounterNews?.spotlight),
+        ...getPendingEncounterSpotlight(game.pendingEncounter, pendingEncounterNews?.spotlight),
         newsId: game.pendingEncounter.newsId,
       }
     : activeSpotlightNews ?
@@ -347,7 +365,8 @@ function App() {
       pendingSpotlights.length + 1
     : pendingSpotlights.length
   const requiresSpotlightDecision =
-    activeSpotlight?.decision?.kind === 'cop-stop' && Boolean(activePendingEncounter)
+    Boolean(activePendingEncounter && activeSpotlight?.decision)
+  const activeEncounterKind = activePendingEncounter?.kind ?? 'cop-stop'
   const activeSpotlightNewsId = activeSpotlight?.newsId ?? null
 
   useEffect(() => {
@@ -948,19 +967,19 @@ function App() {
                     className="ghost-button"
                     onClick={() => resolveSpotlightDecision('flee')}
                   >
-                    {locale.run.spotlightFlee}
+                    {locale.run.spotlightChoice(activeEncounterKind, 'flee')}
                   </button>
                   <button
                     className="ghost-button"
                     onClick={() => resolveSpotlightDecision('surrender')}
                   >
-                    {locale.run.spotlightSurrender}
+                    {locale.run.spotlightChoice(activeEncounterKind, 'surrender')}
                   </button>
                   <button
                     className="accent-button"
                     onClick={() => resolveSpotlightDecision('fight')}
                   >
-                    {locale.run.spotlightFight}
+                    {locale.run.spotlightChoice(activeEncounterKind, 'fight')}
                   </button>
                 </>
               ) : (

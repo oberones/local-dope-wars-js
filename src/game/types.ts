@@ -3,6 +3,7 @@ export type CityId = string
 export type ContentPackId = string
 export type LocaleId = string
 export type GearItemId = string
+export type EncounterKind = 'cop-stop' | 'jacker-ambush'
 export type EncounterChoiceId = 'flee' | 'fight' | 'surrender'
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert' | 'encounter'
@@ -22,6 +23,7 @@ export type EventSpotlightArtKey =
   | 'market-bust'
   | 'market-lucky-break'
   | 'collector'
+  | 'jacker-ambush'
   | 'lucky-break'
   | 'stash-sweep'
   | 'shakedown'
@@ -132,12 +134,12 @@ export interface EventSpotlight {
   artKey: EventSpotlightArtKey
   artLabel: string
   decision?: {
-    kind: 'cop-stop'
+    kind: EncounterKind
     choices: EncounterChoiceId[]
   }
 }
 
-export interface PendingEncounter {
+export interface CopStopEncounter {
   kind: 'cop-stop'
   newsId: number
   cityId: CityId
@@ -145,6 +147,19 @@ export interface PendingEncounter {
   cashDemand: number
   baseDamage: number
 }
+
+export interface JackerAmbushEncounter {
+  kind: 'jacker-ambush'
+  newsId: number
+  cityId: CityId
+  cityLabel: string
+  drugId: DrugId
+  drugLabel: string
+  quantityDemand: number
+  baseDamage: number
+}
+
+export type PendingEncounter = CopStopEncounter | JackerAmbushEncounter
 
 export interface ActivityItem {
   id: number

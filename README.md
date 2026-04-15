@@ -15,7 +15,7 @@ The current built-in content pack is set in Gwinnett County, Georgia, but the lo
 - Finance desk with deposits, withdrawals, debt payoff, borrowing, pawn advances, and recovery
 - Pawnable defensive gear with defense rating and gear value tracking
 - Event spotlight popup windows for market shocks, collector hits, and travel encounters
-- First-pass cop-stop encounter choices with `fight`, `flee`, and `surrender`
+- First-pass decision-based encounter choices for cop stops and rival-crew ambushes
 
 This is the greenfield rebuild. The legacy Dope Wars codebase in `../gwinnett-dope-wars/` is reference material only and is not used at runtime.
 
@@ -93,7 +93,7 @@ make build-subpath SUBPATH_BASE=/apps/some-other-path/
 5. Buy low and sell high while watching stash space, debt growth, city heat, and special market events.
 6. Use the finance desk to deposit cash, withdraw reserves, pay debt, borrow more money, take pawn advances, patch up, and manage gear.
 7. Buy weapons and defensive gear to improve your defense rating, then pawn duplicate gear later for diminishing returns.
-8. When special events or encounters fire, read the popup window and resolve it. Cop-stop encounters now let you `fight`, `flee`, or `surrender`.
+8. When special events or encounters fire, read the popup window and resolve it. Cop stops and rival-crew ambushes now let you `fight`, `flee`, or `surrender`, with different cash or stash consequences.
 9. When the run clock reaches the final day, travel locks and you can finish liquidating inventory and settling finances.
 10. Finalize the run to record a score on the local high-score board.
 
