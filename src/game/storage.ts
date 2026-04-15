@@ -80,16 +80,30 @@ function isPendingEncounter(value: unknown, cityIds: string[]): value is Pending
     return true
   }
 
-  return (
-    isRecord(value) &&
-    value.kind === 'cop-stop' &&
-    typeof value.newsId === 'number' &&
-    typeof value.cityId === 'string' &&
-    cityIds.includes(value.cityId) &&
-    typeof value.cityLabel === 'string' &&
-    typeof value.cashDemand === 'number' &&
-    typeof value.baseDamage === 'number'
-  )
+  if (
+    !isRecord(value) ||
+    typeof value.newsId !== 'number' ||
+    typeof value.cityId !== 'string' ||
+    !cityIds.includes(value.cityId) ||
+    typeof value.cityLabel !== 'string' ||
+    typeof value.baseDamage !== 'number'
+  ) {
+    return false
+  }
+
+  if (value.kind === 'cop-stop') {
+    return typeof value.cashDemand === 'number'
+  }
+
+  if (value.kind === 'jacker-ambush') {
+    return (
+      typeof value.drugId === 'string' &&
+      typeof value.drugLabel === 'string' &&
+      typeof value.quantityDemand === 'number'
+    )
+  }
+
+  return false
 }
 
 function isStoredGameState(value: unknown): value is StoredGameState {
