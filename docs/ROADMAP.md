@@ -12,17 +12,19 @@ Completed:
 - Modern shell UI with hero, stats, signal cards, news feed, and market board
 - Dedicated SVG map scene in `src/components/MapScene.tsx`
 - Art direction brief in `docs/art-direction.md`
-- Basic lint/build verification flow
+- Local save/load, high scores, and run summary flow
+- Finance layer with bank actions, debt pressure, bank yield, and emergency pawn advances
+- Typed market event tables and heat/health encounter systems
+- Basic automated regression coverage plus lint/test/build verification flow
 - The current built-in content pack still defaults to the original Gwinnett County setting
 
 Still missing:
 
-- Save/load and high scores
-- Modern i18n
-- Configurable location/content packs beyond the built-in defaults
-- Deeper game systems
+- Broader i18n coverage
+- More configurable location/content packs beyond the built-in defaults
+- Deeper combat/endgame systems
 - Production-ready art assets
-- Broader automated test coverage
+- Broader save/load and UI automated coverage
 - Endgame polish and progression balance
 
 ## Guiding Priorities

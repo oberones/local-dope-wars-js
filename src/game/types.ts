@@ -112,6 +112,7 @@ export interface GameState {
   day: number
   endDay: number
   debt: number
+  pawnDebt: number
   bankDeposit: number
   stoneLevel: number
   health: number
@@ -141,6 +142,7 @@ export interface RunSummary {
   cityLabel: string
   cash: number
   debt: number
+  pawnDebt: number
   bankDeposit: number
   health: number
   inventoryValue: number
