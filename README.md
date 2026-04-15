@@ -115,7 +115,6 @@ npm run check
 Or with Make:
 
 ```bash
-make test
 make check
 ```
 
