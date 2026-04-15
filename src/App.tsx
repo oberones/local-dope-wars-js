@@ -731,7 +731,9 @@ function App() {
     pawnPaymentAmount,
     maxPawnRepayment,
     locale.run.payPawnButton,
-    game.pawnDebt <= 0 ? locale.hints.noPawnRoom : locale.hints.noCashForPawn,
+    game.pawnDebt <= 0
+      ? locale.hints.pawnDebtCleared
+      : locale.hints.noCashForPawn,
   )
 
   return (

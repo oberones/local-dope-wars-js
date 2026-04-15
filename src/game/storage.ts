@@ -6,6 +6,14 @@ const HIGH_SCORES_KEY = 'local-dope-wars.high-scores.v1'
 const SELECTED_PACK_KEY = 'local-dope-wars.selected-pack.v1'
 const MAX_HIGH_SCORES = 10
 
+type StoredGameState = Omit<GameState, 'pawnDebt'> & {
+  pawnDebt?: number
+}
+
+type StoredHighScoreEntry = Omit<HighScoreEntry, 'pawnDebt'> & {
+  pawnDebt?: number
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -56,7 +64,7 @@ function isMarketRecord(value: unknown, drugIds: string[]) {
   })
 }
 
-function isGameState(value: unknown): value is GameState {
+function isStoredGameState(value: unknown): value is StoredGameState {
   if (
     !isRecord(value) ||
     typeof value.contentPackId !== 'string' ||
@@ -94,7 +102,7 @@ function isGameState(value: unknown): value is GameState {
   )
 }
 
-function isHighScoreEntry(value: unknown): value is HighScoreEntry {
+function isStoredHighScoreEntry(value: unknown): value is StoredHighScoreEntry {
   return (
     isRecord(value) &&
     typeof value.runId === 'string' &&
@@ -119,16 +127,14 @@ function isHighScoreEntry(value: unknown): value is HighScoreEntry {
   )
 }
 
-function normalizeGameState(game: GameState | (GameState & { pawnDebt?: number })) {
+function normalizeGameState(game: StoredGameState): GameState {
   return {
     ...game,
     pawnDebt: game.pawnDebt ?? 0,
   }
 }
 
-function normalizeHighScore(
-  entry: HighScoreEntry | (HighScoreEntry & { pawnDebt?: number }),
-) {
+function normalizeHighScore(entry: StoredHighScoreEntry): HighScoreEntry {
   return {
     ...entry,
     pawnDebt: entry.pawnDebt ?? 0,
@@ -164,7 +170,7 @@ function writeStorage(key: string, value: unknown) {
 export function loadSavedGame() {
   const stored = readStorage<{ version: number; game: unknown }>(SAVE_KEY)
 
-  if (!stored || stored.version !== 1 || !isGameState(stored.game)) {
+  if (!stored || stored.version !== 1 || !isStoredGameState(stored.game)) {
     return null
   }
 
@@ -203,10 +209,9 @@ export function loadHighScores() {
     return []
   }
 
-  return sortHighScores(stored.filter(isHighScoreEntry).map(normalizeHighScore)).slice(
-    0,
-    MAX_HIGH_SCORES,
-  )
+  return sortHighScores(
+    stored.filter(isStoredHighScoreEntry).map(normalizeHighScore),
+  ).slice(0, MAX_HIGH_SCORES)
 }
 
 export function recordHighScore(entry: HighScoreEntry) {
