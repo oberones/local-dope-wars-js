@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import './App.css'
 import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GEAR_ITEMS, GAME_CONFIG, getContentPack } from './game/content'
 import { DEFAULT_LOCALE } from './game/i18n'
@@ -68,9 +68,18 @@ type AppScreen = 'menu' | 'run' | 'summary'
 type OpsVenue = 'market' | 'bank' | 'pawn'
 type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'pawn' | 'payPawn' | 'borrow'
 const locale = DEFAULT_LOCALE
+const OPS_VENUES: OpsVenue[] = ['market', 'bank', 'pawn']
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled pending encounter: ${String(value)}`)
+}
+
+function getOpsVenueTabId(venue: OpsVenue) {
+  return `ops-tab-${venue}`
+}
+
+function getOpsVenuePanelId(venue: OpsVenue) {
+  return `ops-panel-${venue}`
 }
 
 function createTradeDrafts(drugIds = DEFAULT_CONTENT_PACK.drugs.map((drug) => drug.id)) {
@@ -273,6 +282,11 @@ function App() {
   const [financeDrafts, setFinanceDrafts] = useState(createFinanceDrafts)
   const [activeOpsVenue, setActiveOpsVenue] = useState<OpsVenue>('market')
   const [seenSpotlightNewsId, setSeenSpotlightNewsId] = useState(-1)
+  const opsTabRefs = useRef<Record<OpsVenue, HTMLButtonElement | null>>({
+    market: null,
+    bank: null,
+    pawn: null,
+  })
   const spotlightDialogRef = useRef<HTMLElement | null>(null)
   const spotlightDismissRef = useRef<HTMLButtonElement | null>(null)
 
@@ -454,6 +468,50 @@ function App() {
 
   function clearFinanceDraft(field: FinanceDraftKey) {
     setFinanceDraft(field, '')
+  }
+
+  function focusOpsVenue(venue: OpsVenue) {
+    opsTabRefs.current[venue]?.focus()
+  }
+
+  function activateOpsVenue(venue: OpsVenue) {
+    setActiveOpsVenue(venue)
+  }
+
+  function handleOpsVenueKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    venue: OpsVenue,
+  ) {
+    const currentIndex = OPS_VENUES.indexOf(venue)
+
+    if (currentIndex < 0) {
+      return
+    }
+
+    let nextVenue: OpsVenue | null = null
+
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextVenue = OPS_VENUES[(currentIndex + 1) % OPS_VENUES.length]
+        break
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextVenue = OPS_VENUES[(currentIndex - 1 + OPS_VENUES.length) % OPS_VENUES.length]
+        break
+      case 'Home':
+        nextVenue = OPS_VENUES[0]
+        break
+      case 'End':
+        nextVenue = OPS_VENUES[OPS_VENUES.length - 1]
+        break
+      default:
+        return
+    }
+
+    event.preventDefault()
+    activateOpsVenue(nextVenue)
+    focusOpsVenue(nextVenue)
   }
 
   function fillMaxBuy(drugId: DrugId) {
@@ -1203,53 +1261,68 @@ function App() {
             aria-label={locale.run.businessTabsLabel}
           >
             <button
-              id="ops-tab-market"
+              id={getOpsVenueTabId('market')}
               type="button"
               role="tab"
               aria-selected={activeOpsVenue === 'market'}
-              aria-controls="ops-panel-market"
+              aria-controls={getOpsVenuePanelId('market')}
+              tabIndex={activeOpsVenue === 'market' ? 0 : -1}
               className={`ops-venue-tab${
                 activeOpsVenue === 'market' ? ' ops-venue-tab--active' : ''
               }`}
-              onClick={() => setActiveOpsVenue('market')}
+              onClick={() => activateOpsVenue('market')}
+              onKeyDown={(event) => handleOpsVenueKeyDown(event, 'market')}
+              ref={(element) => {
+                opsTabRefs.current.market = element
+              }}
             >
               {locale.run.blackMarketTab}
             </button>
             <button
-              id="ops-tab-bank"
+              id={getOpsVenueTabId('bank')}
               type="button"
               role="tab"
               aria-selected={activeOpsVenue === 'bank'}
-              aria-controls="ops-panel-bank"
+              aria-controls={getOpsVenuePanelId('bank')}
+              tabIndex={activeOpsVenue === 'bank' ? 0 : -1}
               className={`ops-venue-tab${
                 activeOpsVenue === 'bank' ? ' ops-venue-tab--active' : ''
               }`}
-              onClick={() => setActiveOpsVenue('bank')}
+              onClick={() => activateOpsVenue('bank')}
+              onKeyDown={(event) => handleOpsVenueKeyDown(event, 'bank')}
+              ref={(element) => {
+                opsTabRefs.current.bank = element
+              }}
             >
               {locale.run.bankTab}
             </button>
             <button
-              id="ops-tab-pawn"
+              id={getOpsVenueTabId('pawn')}
               type="button"
               role="tab"
               aria-selected={activeOpsVenue === 'pawn'}
-              aria-controls="ops-panel-pawn"
+              aria-controls={getOpsVenuePanelId('pawn')}
+              tabIndex={activeOpsVenue === 'pawn' ? 0 : -1}
               className={`ops-venue-tab${
                 activeOpsVenue === 'pawn' ? ' ops-venue-tab--active' : ''
               }`}
-              onClick={() => setActiveOpsVenue('pawn')}
+              onClick={() => activateOpsVenue('pawn')}
+              onKeyDown={(event) => handleOpsVenueKeyDown(event, 'pawn')}
+              ref={(element) => {
+                opsTabRefs.current.pawn = element
+              }}
             >
               {locale.run.pawnShopTab}
             </button>
           </div>
 
-          {activeOpsVenue === 'market' ? (
-            <div
-              id="ops-panel-market"
-              className="ops-venue-panel"
-              role="tabpanel"
-              aria-labelledby="ops-tab-market"
-            >
+          <div
+            id={getOpsVenuePanelId('market')}
+            className="ops-venue-panel"
+            role="tabpanel"
+            aria-labelledby={getOpsVenueTabId('market')}
+            hidden={activeOpsVenue !== 'market'}
+          >
               <div className="finance-panel__summary ops-venue-summary">
                 <div className="finance-summary-card">
                   <p className="meta-label">{locale.run.cheapestLane}</p>
@@ -1411,15 +1484,14 @@ function App() {
                 </div>
               </section>
             </div>
-          ) : null}
 
-          {activeOpsVenue === 'bank' ? (
-            <div
-              id="ops-panel-bank"
-              className="ops-venue-panel"
-              role="tabpanel"
-              aria-labelledby="ops-tab-bank"
-            >
+          <div
+            id={getOpsVenuePanelId('bank')}
+            className="ops-venue-panel"
+            role="tabpanel"
+            aria-labelledby={getOpsVenueTabId('bank')}
+            hidden={activeOpsVenue !== 'bank'}
+          >
               <div className="finance-panel__summary ops-venue-summary">
                 <div className="finance-summary-card">
                   <p className="meta-label">{locale.run.bankReserve}</p>
@@ -1577,15 +1649,14 @@ function App() {
                 </label>
               </div>
             </div>
-          ) : null}
 
-          {activeOpsVenue === 'pawn' ? (
-            <div
-              id="ops-panel-pawn"
-              className="ops-venue-panel"
-              role="tabpanel"
-              aria-labelledby="ops-tab-pawn"
-            >
+          <div
+            id={getOpsVenuePanelId('pawn')}
+            className="ops-venue-panel"
+            role="tabpanel"
+            aria-labelledby={getOpsVenueTabId('pawn')}
+            hidden={activeOpsVenue !== 'pawn'}
+          >
               <div className="finance-panel__summary ops-venue-summary">
                 <div className="finance-summary-card">
                   <p className="meta-label">{locale.run.health}</p>
@@ -1786,7 +1857,6 @@ function App() {
                 </div>
               </div>
             </div>
-          ) : null}
         </article>
 
         <aside className="panel activity-panel">
