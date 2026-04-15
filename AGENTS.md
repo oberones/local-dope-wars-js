@@ -97,6 +97,7 @@ Run from `/Users/oberon/Projects/coding/javascript/local-dope-wars`:
 ```bash
 npm run dev
 npm run lint
+npm run test
 npm run build
 ```
 
@@ -105,6 +106,7 @@ Equivalent Makefile shortcuts are also available:
 ```bash
 make dev
 make lint
+make test
 make build
 make check
 make docker-config
@@ -114,7 +116,7 @@ make docker-up
 
 Before finishing meaningful source changes:
 
-1. Run `npm run lint` and `npm run build`, or `make check`.
+1. Run `npm run lint`, `npm run test`, and `npm run build`, or `make check`.
 3. Report any limitations or skipped verification clearly.
 
 When asked to create a commit:
@@ -132,6 +134,7 @@ When asked to create a commit:
 - A typed content-pack foundation now includes a player-facing launch-screen picker and more than one bundled starter pack.
 - A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
 - Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, and debt-collector pressure are now live, but longer-term health/combat systems are still pending.
+- A basic Vitest regression suite now covers core content-pack, travel, market-event, and finance-pressure flows.
 - Save/load, weapons, deeper pawn-style money systems, and endgame polish are still pending.
 
 ## Good Next Steps
@@ -140,7 +143,7 @@ When asked to create a commit:
 2. Deepen debt pressure, bank depth, and any follow-on weapon/combat systems.
 3. Add more bundled or importable content packs beyond the current starter set.
 4. Replace placeholder geometric map art with custom illustrated assets while keeping the same component boundary.
-5. Add automated tests around the content-pack, encounter, and market-event gameplay flows.
+5. Expand automated coverage around save/load, UI flows, and deeper finance/combat systems.
 
 ## Legacy References
 
