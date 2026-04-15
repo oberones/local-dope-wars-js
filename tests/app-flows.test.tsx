@@ -189,4 +189,67 @@ describe('app browser flows', () => {
       screen.getByText('You paid $640 to settle the stop and keep breathing room.'),
     ).toBeTruthy()
   })
+
+  it('renders a resumed jacker ambush decision and lets the player drop the stash', async () => {
+    const savedGame = {
+      ...createNewGame('gwinnett-county'),
+      currentCityId: 'lawrenceville' as const,
+      newsCursor: 2,
+      inventory: {
+        ...createNewGame('gwinnett-county').inventory,
+        meth: 9,
+      },
+      pendingEncounter: {
+        kind: 'jacker-ambush' as const,
+        newsId: 1,
+        cityId: 'lawrenceville' as const,
+        cityLabel: 'Lawrenceville',
+        drugId: 'meth' as const,
+        drugLabel: 'Meth',
+        quantityDemand: 3,
+        baseDamage: 8,
+      },
+      news: [
+        {
+          id: 1,
+          tone: 'encounter' as const,
+          text: 'A rival crew boxed you in near Lawrenceville with eyes on your Meth.',
+          spotlight: {
+            tone: 'encounter' as const,
+            title: 'Jacker ambush',
+            detail:
+              'A rival crew corners you near Lawrenceville. You can run it, fight back, or hand over 3 Meth to get free.',
+            artKey: 'jacker-ambush' as const,
+            artLabel: 'Rival crew',
+            decision: {
+              kind: 'jacker-ambush' as const,
+              choices: ['flee', 'fight', 'surrender'] as const,
+            },
+          },
+        },
+      ],
+    }
+
+    saveGame(savedGame)
+
+    const { user } = renderApp()
+
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'Continue saved run',
+      }),
+    )
+
+    expect(await screen.findByText('Jacker ambush')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Drop the stash' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    expect(
+      screen.getByText('You dropped 3 Meth to end the ambush without blood.'),
+    ).toBeTruthy()
+  })
 })

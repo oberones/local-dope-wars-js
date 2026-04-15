@@ -13,7 +13,7 @@ Completed:
 - Dedicated SVG map scene in `src/components/MapScene.tsx`
 - Art direction brief in `docs/art-direction.md`
 - Local save/load, high scores, and run summary flow
-- Finance layer with bank actions, debt pressure, bank yield, emergency pawn advances, pawnable defensive gear, and first-pass cop-stop encounter choices
+- Finance layer with bank actions, debt pressure, bank yield, emergency pawn advances, pawnable defensive gear, and first-pass decision-based encounter choices
 - Typed market event tables and heat/health encounter systems
 - Text-first event spotlight popups for market shocks, collectors, and travel encounters
 - Automated regression coverage for core gameplay, storage/save normalization, and key browser-like UI flows plus lint/test/build verification flow
@@ -23,7 +23,7 @@ Still missing:
 
 - Broader i18n coverage
 - More configurable location/content packs beyond the built-in defaults
-- Deeper combat/endgame systems on top of the new defensive gear lane and initial encounter-choice flow
+- Deeper combat/endgame systems on top of the new defensive gear lane and initial encounter-choice flows
 - Production-ready art assets
 - Broader browser-level save/load and UI automated coverage beyond the current smoke paths
 - Endgame polish and progression balance
