@@ -7,11 +7,15 @@ The current built-in content pack is set in Gwinnett County, Georgia, but the lo
 ## Current Status
 
 - Built with Vite, React, and TypeScript
-- Pure typed game core for market generation, travel, buying, selling, banking, debt, and run scoring
+- Pure typed game core for market generation, travel, buying, selling, banking, debt, encounters, and run scoring
 - Dedicated SVG map scene for the default Gwinnett County layout
 - Start new run / continue saved run flow
 - Browser-local autosave and high scores
-- Content-pack foundation for future alternate location packs
+- Multiple bundled content packs with a launch-screen pack picker
+- Finance desk with deposits, withdrawals, debt payoff, borrowing, pawn advances, and recovery
+- Pawnable defensive gear with defense rating and gear value tracking
+- Event spotlight popup windows for market shocks, collector hits, and travel encounters
+- First-pass cop-stop encounter choices with `fight`, `flee`, and `surrender`
 
 This is the greenfield rebuild. The legacy Dope Wars codebase in `../gwinnett-dope-wars/` is reference material only and is not used at runtime.
 
@@ -83,28 +87,41 @@ make build-subpath SUBPATH_BASE=/apps/some-other-path/
 ## How To Play
 
 1. Launch the app and choose `Start new run` or `Continue saved run`.
-2. Each run starts with cash, debt, limited stash space, and the default Gwinnett map.
-3. Travel between cities to advance the day and refresh the market.
-4. Buy low and sell high while watching stash space, debt growth, and city heat.
-5. Use the finance desk to deposit cash, withdraw reserves, pay debt, or borrow more money.
-6. When the run clock reaches the final day, travel locks and you can finish liquidating inventory and settling finances.
-7. Finalize the run to record a score on the local high-score board.
+2. New runs start on the currently selected bundled content pack. Saved runs keep their original pack.
+3. Each run starts with cash, debt, limited stash space, and a market that refreshes when you travel.
+4. Travel between cities to advance the day, refresh the market, and trigger heat-based encounter risk.
+5. Buy low and sell high while watching stash space, debt growth, city heat, and special market events.
+6. Use the finance desk to deposit cash, withdraw reserves, pay debt, borrow more money, take pawn advances, patch up, and manage gear.
+7. Buy weapons and defensive gear to improve your defense rating, then pawn duplicate gear later for diminishing returns.
+8. When special events or encounters fire, read the popup window and resolve it. Cop-stop encounters now let you `fight`, `flee`, or `surrender`.
+9. When the run clock reaches the final day, travel locks and you can finish liquidating inventory and settling finances.
+10. Finalize the run to record a score on the local high-score board.
 
 Notes:
 
 - Runs autosave in browser localStorage.
 - High scores are also stored locally in the browser.
-- The current default content pack is Gwinnett County.
+- The current built-in default content pack is Gwinnett County.
+- Travel encounters, collector pressure, market shocks, and gear value all feed into the current run state.
+
+## Current Bundled Locations
+
+- `Gwinnett County` (default starter pack)
+  Locations: Duluth, Suwanee, Norcross, Snellville, Lawrenceville, Lilburn, Grayson, Dacula
+- `Atlanta Intown`
+  Locations: Midtown, Buckhead, Little Five, Old Fourth Ward, Decatur, West End, Summerhill, East Atlanta
 
 ## Testing And Validation
 
-This project now includes a small automated regression suite for the typed game core. The main validation flow is:
+This project now includes automated regression coverage for the typed game core, storage/save normalization, and key browser-like UI flows. The main validation flow is:
 
 ```bash
 npm run lint
 npm run test
 npm run build
 ```
+
+`npm run build` defaults `VITE_BASE_PATH` to `/apps/local-dope-wars/` for the current deployment target. Override `VITE_BASE_PATH` explicitly only when building for a different mount point.
 
 Or run both together:
 
@@ -118,13 +135,13 @@ Or with Make:
 make check
 ```
 
-For a static deploy under `https://malevolentgods.com/apps/local-dope-wars/`, build with:
+For the current static deploy target under `https://malevolentgods.com/apps/local-dope-wars/`, build with:
 
 ```bash
 make build-subpath
 ```
 
-When changing gameplay or UI in meaningful ways, contributors should run `lint`, `test`, and `build` before finishing work.
+When changing gameplay or UI in meaningful ways, contributors should run `lint`, `test`, and a base-path-aware build before finishing work.
 
 ## Deployment Helpers
 
@@ -139,6 +156,18 @@ make docker-logs
 ```
 
 `docker-compose.yml` joins the external Docker network `ai-backend`, so that network must already exist on the target host.
+
+For static deployments under a subpath, build with the correct Vite base path before uploading `dist/`:
+
+```bash
+VITE_BASE_PATH=/apps/local-dope-wars/ npm run build
+```
+
+or use:
+
+```bash
+make build-subpath
+```
 
 ## Project Structure
 
@@ -186,12 +215,29 @@ make check
 
 5. If you create commits for shared work, use Conventional Commits and include a short subject like `feat: add encounter events`, a brief body describing what changed, and a validation note such as `Validation: npm run lint && npm run test && npm run build`.
 
+### Adding A Custom Location Pack
+
+If you want to add another bundled location pack:
+
+1. Add or clone a pack definition in `src/game/content.ts`.
+2. Follow the typed shapes in `src/game/types.ts`, especially `ContentPackDefinition`, city definitions, drug definitions, and map scene data.
+3. Provide:
+   - a stable `id`, `label`, `shortLabel`, `description`, and `accent`
+   - a `startingCityId`
+   - `cities`, `drugs`, and `scoreTiers`
+   - `map.routes`, `map.districts`, `map.arterials`, and `map.labels`
+4. Add the new pack to the exported `CONTENT_PACKS` list in `src/game/content.ts` so it appears in the launcher pack picker.
+5. Keep gameplay rules in `src/game/core.ts` unchanged unless you are intentionally adding a new mechanic. New packs should fit the existing typed content model.
+6. Run `npm run test`, `npm run lint`, and `npm run build` or just `make check`.
+
+The current bundled packs in `src/game/content.ts` are the best examples to copy when creating a new pack.
+
 Areas that are especially helpful:
 
 - modern i18n
-- deeper encounters and cops/heat systems
+- deeper encounter choices and combat systems
 - persistent saves and endgame polish
-- tests for the typed game core
+- tests for the typed game core and browser flows
 - improved content-pack tooling for alternate locations
 - art and map production upgrades
 

@@ -268,6 +268,9 @@ export const EN_US_LOCALE = {
     nextBankYield: 'Next bank yield',
     collectorRisk: 'Collector risk',
     spotlightDismiss: 'Keep moving',
+    spotlightFlee: 'Floor it',
+    spotlightFight: 'Fight back',
+    spotlightSurrender: 'Pay up',
     spotlightQueue: (count: number) =>
       count > 1 ? `${count} event windows queued` : 'Event window',
     depositLabel: 'Deposit to bank',
@@ -388,6 +391,8 @@ export const EN_US_LOCALE = {
       `${drugLabel} is dry in ${cityLabel} today.`,
     needMoreStashSpace: 'You need more stash space.',
     notEnoughCash: 'You do not have enough cash for that pickup.',
+    resolveEncounterFirst:
+      'Resolve the active encounter before making another move.',
     tooHurtToMove:
       'You are too beat up to travel. Patch up before you move again.',
     shakedownNews: (amount: number) =>
@@ -395,6 +400,39 @@ export const EN_US_LOCALE = {
     shakedownTitle: 'Roadside shakedown',
     shakedownDetail: (cityLabel: string, amount: number) =>
       `Heat on the way into ${cityLabel} forced you to drop ${formatMoney(amount)} to keep moving.`,
+    copStopNews: (cityLabel: string) =>
+      `Blue lights hit behind you near ${cityLabel}. Decide fast.`,
+    copStopTitle: 'Cop stop',
+    copStopDetail: (cityLabel: string, cashDemand: number) =>
+      `A patrol car pins you down near ${cityLabel}. You can floor it, fight back, or hand over up to ${formatMoney(cashDemand)} to cool it off.`,
+    copStopActivity: (cityLabel: string, cashDemand: number) =>
+      `A patrol stop near ${cityLabel} is demanding up to ${formatMoney(cashDemand)} unless you make a move.`,
+    fledCopStopNews: (healthLoss: number) =>
+      healthLoss > 0
+        ? `You punched out of the stop and lost ${healthLoss} health getting clear.`
+        : 'You punched out of the stop clean and kept moving.',
+    fledCopStopTitle: 'Ran the stop',
+    fledCopStopDetail: (cityLabel: string, health: number) =>
+      `You blasted past the stop near ${cityLabel}. Health is now ${health}%.`,
+    surrenderedCopStopNews: (cashLost: number, healthLoss: number) =>
+      healthLoss > 0
+        ? `You paid ${formatMoney(cashLost)} and still took a rough shove for ${healthLoss} health.`
+        : `You paid ${formatMoney(cashLost)} to settle the stop and keep breathing room.`,
+    surrenderedCopStopTitle: 'Paid off the stop',
+    surrenderedCopStopDetail: (cityLabel: string, cashLost: number, health: number) =>
+      `You handed over ${formatMoney(cashLost)} near ${cityLabel}. Health is now ${health}%.`,
+    wonCopFightNews: (healthLoss: number) =>
+      healthLoss > 0
+        ? `You fought through the stop and came out down ${healthLoss} health.`
+        : 'You fought through the stop without taking a real hit.',
+    wonCopFightTitle: 'Won the stop',
+    wonCopFightDetail: (cityLabel: string, health: number) =>
+      `You held your ground near ${cityLabel} and broke contact. Health is now ${health}%.`,
+    lostCopFightNews: (cashLost: number, healthLoss: number) =>
+      `The fight went bad. You lost ${formatMoney(cashLost)} and ${healthLoss} health before they backed off.`,
+    lostCopFightTitle: 'Lost the stop',
+    lostCopFightDetail: (cityLabel: string, cashLost: number, health: number) =>
+      `The stop near ${cityLabel} cost ${formatMoney(cashLost)} and left your health at ${health}%.`,
     roughRideNews: (damage: number) =>
       `A rough stop left you down ${damage} health.`,
     roughRideTitle: 'Rough stop',

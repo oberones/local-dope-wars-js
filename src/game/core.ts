@@ -11,6 +11,7 @@ import type {
   ContentPackId,
   DrugDefinition,
   DrugId,
+  EncounterChoiceId,
   EventSpotlight,
   GameState,
   GearItemDefinition,
@@ -305,6 +306,7 @@ export function createNewGame(
     market,
     news: [],
     newsCursor: 0,
+    pendingEncounter: null,
     activity: [],
     activityCursor: 0,
   }
@@ -351,6 +353,16 @@ export function getDefenseRating(state: GameState) {
     (total, item) => total + item.defense * state.gear[item.id],
     0,
   )
+}
+
+function getWeaponRating(state: GameState) {
+  return GEAR_ITEMS.reduce((total, item) => {
+    if (item.category !== 'weapon') {
+      return total
+    }
+
+    return total + item.defense * state.gear[item.id]
+  }, 0)
 }
 
 function getMitigatedDamage(baseDamage: number, defenseRating: number) {
@@ -687,33 +699,43 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
     })
   }
 
-  const damage = Math.min(
-    state.health,
-    getMitigatedDamage(
-      randomInt(
-        GAME_CONFIG.travelEncounterDamageMin,
-        GAME_CONFIG.travelEncounterDamageMaxBase +
-          Math.round(city.cops / GAME_CONFIG.travelEncounterDamageHeatDivisor),
-      ),
-      getDefenseRating(state),
-    ),
+  const baseDamage = randomInt(
+    GAME_CONFIG.travelEncounterDamageMin,
+    GAME_CONFIG.travelEncounterDamageMaxBase +
+      Math.round(city.cops / GAME_CONFIG.travelEncounterDamageHeatDivisor),
   )
+  const cashDemand = Math.max(
+    180,
+    Math.round(baseDamage * 52 + city.cops * 7),
+  )
+  const pendingNewsId = state.newsCursor
   const nextState: GameState = {
     ...state,
-    health: Math.max(state.health - damage, 0),
+    pendingEncounter: {
+      kind: 'cop-stop',
+      newsId: pendingNewsId,
+      cityId: city.id,
+      cityLabel: city.label,
+      cashDemand,
+      baseDamage,
+    },
   }
 
   return applyUpdates(nextState, {
     news: [
       {
         tone: 'encounter',
-        text: locale.game.roughRideNews(damage),
+        text: locale.game.copStopNews(city.label),
         spotlight: {
           tone: 'encounter',
-          title: locale.game.roughRideTitle,
-          detail: locale.game.roughRideDetail(city.label, nextState.health),
+          title: locale.game.copStopTitle,
+          detail: locale.game.copStopDetail(city.label, cashDemand),
           artKey: 'rough-stop',
           artLabel: 'Rough stop',
+          decision: {
+            kind: 'cop-stop',
+            choices: ['flee', 'fight', 'surrender'],
+          },
         },
       },
     ],
@@ -721,8 +743,154 @@ function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCur
       createActivity(
         nextState,
         'encounter',
-        locale.game.roughRideTitle,
-        locale.game.roughRideDetail(city.label, nextState.health),
+        locale.game.copStopTitle,
+        locale.game.copStopActivity(city.label, cashDemand),
+      ),
+    ],
+  })
+}
+
+function getFightSuccessChance(state: GameState, cityCops: number) {
+  const weaponRating = getWeaponRating(state)
+  const defenseRating = getDefenseRating(state)
+
+  return Math.min(
+    Math.max(
+      0.22 + weaponRating * 0.035 + defenseRating * 0.012 - cityCops * 0.0045,
+      0.12,
+    ),
+    0.82,
+  )
+}
+
+export function resolvePendingEncounter(
+  state: GameState,
+  choice: EncounterChoiceId,
+) {
+  const encounter = state.pendingEncounter
+
+  if (!encounter || encounter.kind !== 'cop-stop') {
+    return state
+  }
+
+  const clearedState: GameState = {
+    ...state,
+    pendingEncounter: null,
+  }
+  const defenseRating = getDefenseRating(clearedState)
+
+  if (choice === 'flee') {
+    const healthLoss = Math.min(
+      clearedState.health,
+      getMitigatedDamage(encounter.baseDamage, defenseRating),
+    )
+    const nextState: GameState = {
+      ...clearedState,
+      health: Math.max(clearedState.health - healthLoss, 0),
+    }
+
+    return applyUpdates(nextState, {
+      news: [
+        {
+          tone: 'encounter',
+          text: locale.game.fledCopStopNews(healthLoss),
+        },
+      ],
+      activity: [
+        createActivity(
+          nextState,
+          'encounter',
+          locale.game.fledCopStopTitle,
+          locale.game.fledCopStopDetail(encounter.cityLabel, nextState.health),
+        ),
+      ],
+    })
+  }
+
+  if (choice === 'surrender') {
+    const cashLost = Math.min(clearedState.cash, encounter.cashDemand)
+    const healthLoss =
+      cashLost < encounter.cashDemand ?
+        Math.min(clearedState.health, getMitigatedDamage(2, defenseRating))
+      : 0
+    const nextState: GameState = {
+      ...clearedState,
+      cash: clearedState.cash - cashLost,
+      health: Math.max(clearedState.health - healthLoss, 0),
+    }
+
+    return applyUpdates(nextState, {
+      news: [
+        {
+          tone: 'encounter',
+          text: locale.game.surrenderedCopStopNews(cashLost, healthLoss),
+        },
+      ],
+      activity: [
+        createActivity(
+          nextState,
+          'encounter',
+          locale.game.surrenderedCopStopTitle,
+          locale.game.surrenderedCopStopDetail(encounter.cityLabel, cashLost, nextState.health),
+        ),
+      ],
+    })
+  }
+
+  const fightSuccess = Math.random() < getFightSuccessChance(clearedState, getCurrentCity(clearedState).cops)
+
+  if (fightSuccess) {
+    const healthLoss = Math.min(
+      clearedState.health,
+      getMitigatedDamage(Math.max(encounter.baseDamage - 5, 1), defenseRating),
+    )
+    const nextState: GameState = {
+      ...clearedState,
+      health: Math.max(clearedState.health - healthLoss, 0),
+    }
+
+    return applyUpdates(nextState, {
+      news: [
+        {
+          tone: 'encounter',
+          text: locale.game.wonCopFightNews(healthLoss),
+        },
+      ],
+      activity: [
+        createActivity(
+          nextState,
+          'encounter',
+          locale.game.wonCopFightTitle,
+          locale.game.wonCopFightDetail(encounter.cityLabel, nextState.health),
+        ),
+      ],
+    })
+  }
+
+  const healthLoss = Math.min(
+    clearedState.health,
+    getMitigatedDamage(encounter.baseDamage + 6, defenseRating),
+  )
+  const cashLost = Math.min(clearedState.cash, Math.round(encounter.cashDemand * 0.5))
+  const nextState: GameState = {
+    ...clearedState,
+    cash: clearedState.cash - cashLost,
+    health: Math.max(clearedState.health - healthLoss, 0),
+  }
+
+  return applyUpdates(nextState, {
+    news: [
+      {
+        tone: 'encounter',
+        text: locale.game.lostCopFightNews(cashLost, healthLoss),
+      },
+    ],
+    activity: [
+      createActivity(
+        nextState,
+        'encounter',
+        locale.game.lostCopFightTitle,
+        locale.game.lostCopFightDetail(encounter.cityLabel, cashLost, nextState.health),
       ),
     ],
   })
@@ -877,6 +1045,17 @@ export function isRunOver(state: GameState) {
 }
 
 export function travelToCity(state: GameState, cityId: CityId) {
+  if (state.pendingEncounter) {
+    return applyUpdates(state, {
+      news: [
+        {
+          tone: 'alert',
+          text: locale.game.resolveEncounterFirst,
+        },
+      ],
+    })
+  }
+
   if (cityId === state.currentCityId) {
     return applyUpdates(state, {
       news: [

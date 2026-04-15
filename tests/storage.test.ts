@@ -86,6 +86,14 @@ describe('storage regressions', () => {
       ...baseGame,
       pawnDebt: 900,
       currentCityId: 'midtown',
+      pendingEncounter: {
+        kind: 'cop-stop',
+        newsId: 99,
+        cityId: 'midtown',
+        cityLabel: 'Midtown',
+        cashDemand: 450,
+        baseDamage: 11,
+      },
       news: [
         {
           id: 99,
@@ -122,11 +130,18 @@ describe('storage regressions', () => {
     expect(loadSelectedContentPackId()).toBe('atlanta-intown')
   })
 
-  it('normalizes older saves that predate pawn debt and gear support', () => {
+  it('normalizes older saves that predate pawn debt, gear, and pending encounters', () => {
     const game = createNewGame('gwinnett-county')
-    const legacyGame = { ...game } as GameState & { pawnDebt?: number; gear?: GameState['gear'] }
+    const legacyGame = {
+      ...game,
+    } as GameState & {
+      pawnDebt?: number
+      gear?: GameState['gear']
+      pendingEncounter?: GameState['pendingEncounter']
+    }
     delete legacyGame.pawnDebt
     delete legacyGame.gear
+    delete legacyGame.pendingEncounter
 
     localStorageMock.setItem(
       SAVE_KEY,
@@ -142,6 +157,7 @@ describe('storage regressions', () => {
       gear: Object.fromEntries(
         Object.keys(game.gear).map((gearId) => [gearId, 0]),
       ),
+      pendingEncounter: null,
     })
   })
 

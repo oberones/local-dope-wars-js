@@ -36,6 +36,7 @@ import {
   payDebt,
   pawnGear,
   recoverHealth,
+  resolvePendingEncounter,
   sellDrug,
   takePawnAdvance,
   travelToCity,
@@ -55,10 +56,12 @@ import type {
   ContentPackDefinition,
   ContentPackId,
   DrugId,
+  EncounterChoiceId,
   EventSpotlight,
   GameState,
   HighScoreEntry,
   NewsItem,
+  PendingEncounter,
 } from './game/types'
 
 type AppScreen = 'menu' | 'run' | 'summary'
@@ -203,6 +206,27 @@ function getPendingSpotlights(
     .sort((left, right) => left.id - right.id)
 }
 
+function getCopStopSpotlight(
+  encounter: PendingEncounter,
+  existingSpotlight?: EventSpotlight,
+) {
+  if (existingSpotlight?.decision?.kind === 'cop-stop') {
+    return existingSpotlight
+  }
+
+  return {
+    tone: 'encounter' as const,
+    title: locale.game.copStopTitle,
+    detail: locale.game.copStopDetail(encounter.cityLabel, encounter.cashDemand),
+    artKey: 'rough-stop' as const,
+    artLabel: 'Rough stop',
+    decision: {
+      kind: 'cop-stop' as const,
+      choices: ['flee', 'fight', 'surrender'] as const,
+    },
+  }
+}
+
 function App() {
   const [screen, setScreen] = useState<AppScreen>('menu')
   const [game, setGame] = useState<GameState | null>(null)
@@ -299,17 +323,35 @@ function App() {
 
   const pendingSpotlights =
     screen === 'run' ? getPendingSpotlights(game, seenSpotlightNewsId) : []
+  const pendingEncounterNews =
+    game?.pendingEncounter ?
+      game.news.find((item) => item.id === game.pendingEncounter?.newsId)
+    : null
   const activeSpotlightNews = pendingSpotlights[0] ?? null
   const activeSpotlight =
-    activeSpotlightNews ?
+    game?.pendingEncounter ?
+      {
+        ...getCopStopSpotlight(game.pendingEncounter, pendingEncounterNews?.spotlight),
+        newsId: game.pendingEncounter.newsId,
+      }
+    : activeSpotlightNews ?
       {
         ...activeSpotlightNews.spotlight,
         newsId: activeSpotlightNews.id,
       }
     : null
+  const activePendingEncounter = game?.pendingEncounter ?? null
+  const spotlightQueueCount =
+    activePendingEncounter &&
+    !pendingSpotlights.some((item) => item.id === activePendingEncounter.newsId) ?
+      pendingSpotlights.length + 1
+    : pendingSpotlights.length
+  const requiresSpotlightDecision =
+    activeSpotlight?.decision?.kind === 'cop-stop' && Boolean(activePendingEncounter)
+  const activeSpotlightNewsId = activeSpotlight?.newsId ?? null
 
   useEffect(() => {
-    if (!activeSpotlightNews) {
+    if (activeSpotlightNewsId === null) {
       return
     }
 
@@ -322,8 +364,13 @@ function App() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (requiresSpotlightDecision) {
+          event.preventDefault()
+          return
+        }
+
         event.preventDefault()
-        setSeenSpotlightNewsId(activeSpotlightNews.id)
+        setSeenSpotlightNewsId(activeSpotlightNewsId)
         return
       }
 
@@ -360,7 +407,7 @@ function App() {
       document.removeEventListener('keydown', handleKeyDown)
       previousFocusedElement?.focus()
     }
-  }, [activeSpotlightNews])
+  }, [activeSpotlightNewsId, requiresSpotlightDecision])
 
   function setDraft(drugId: DrugId, nextValue: string) {
     setTradeDrafts((current) => ({
@@ -834,10 +881,19 @@ function App() {
       : locale.hints.noCashForPawn,
   )
   const dismissSpotlight = () => {
-    if (!activeSpotlight) {
+    if (!activeSpotlight || requiresSpotlightDecision) {
       return
     }
 
+    setSeenSpotlightNewsId(activeSpotlight.newsId)
+  }
+
+  function resolveSpotlightDecision(choice: EncounterChoiceId) {
+    if (!activeSpotlight || !requiresSpotlightDecision) {
+      return
+    }
+
+    setGame((current) => (current ? resolvePendingEncounter(current, choice) : current))
     setSeenSpotlightNewsId(activeSpotlight.newsId)
   }
 
@@ -848,7 +904,7 @@ function App() {
           className="event-modal-backdrop"
           role="presentation"
           onClick={(event) => {
-            if (event.target === event.currentTarget) {
+            if (event.target === event.currentTarget && !requiresSpotlightDecision) {
               dismissSpotlight()
             }
           }}
@@ -870,7 +926,7 @@ function App() {
                 <h2 id="event-modal-title">{activeSpotlight.title}</h2>
               </div>
               <p className="event-modal__queue">
-                {locale.run.spotlightQueue(pendingSpotlights.length)}
+                {locale.run.spotlightQueue(spotlightQueueCount)}
               </p>
             </div>
             <div className="event-modal__body">
@@ -885,13 +941,37 @@ function App() {
               </p>
             </div>
             <div className="event-modal__actions">
-              <button
-                ref={spotlightDismissRef}
-                className="accent-button"
-                onClick={dismissSpotlight}
-              >
-                {locale.run.spotlightDismiss}
-              </button>
+              {requiresSpotlightDecision ? (
+                <>
+                  <button
+                    ref={spotlightDismissRef}
+                    className="ghost-button"
+                    onClick={() => resolveSpotlightDecision('flee')}
+                  >
+                    {locale.run.spotlightFlee}
+                  </button>
+                  <button
+                    className="ghost-button"
+                    onClick={() => resolveSpotlightDecision('surrender')}
+                  >
+                    {locale.run.spotlightSurrender}
+                  </button>
+                  <button
+                    className="accent-button"
+                    onClick={() => resolveSpotlightDecision('fight')}
+                  >
+                    {locale.run.spotlightFight}
+                  </button>
+                </>
+              ) : (
+                <button
+                  ref={spotlightDismissRef}
+                  className="accent-button"
+                  onClick={dismissSpotlight}
+                >
+                  {locale.run.spotlightDismiss}
+                </button>
+              )}
             </div>
           </section>
         </div>

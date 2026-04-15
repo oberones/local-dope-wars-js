@@ -87,6 +87,8 @@ This is the modern rebuild of the classic Dope Wars project, now branded as Loca
 - Do not import runtime code from `../gwinnett-dope-wars/assets/js/*.js`.
 - Do not rebuild the app around direct DOM manipulation.
 - Do not hand-edit generated output in `dist/`.
+- Do not edit `CHANGELOG.md` or bump package versions as part of normal feature/fix work.
+- Treat changelog generation and version bumps as user-managed manual release operations handled with Commitizen.
 - Do not make meaningful source changes inside `node_modules/`.
 - Avoid adding dependencies unless they clearly support the modern rebuild.
 
@@ -100,6 +102,8 @@ npm run lint
 npm run test
 npm run build
 ```
+
+`npm run build` should resolve with `VITE_BASE_PATH=/apps/local-dope-wars/` by default. Override `VITE_BASE_PATH` explicitly only when targeting a different deployment mount point.
 
 Equivalent Makefile shortcuts are also available:
 
@@ -116,7 +120,7 @@ make docker-up
 
 Before finishing meaningful source changes:
 
-1. Run `npm run lint`, `npm run test`, and `npm run build`, or `make check`.
+1. Run `npm run lint`, `npm run test`, and `npm run build`, or `make check` if it preserves the same `/apps/local-dope-wars/` base-path expectation.
 3. Report any limitations or skipped verification clearly.
 
 When asked to create a commit:
@@ -124,6 +128,7 @@ When asked to create a commit:
 1. Use Conventional Commits for the subject line, for example `feat: add run persistence`.
 2. Include a short commit body that states what changed.
 3. Include a short validation note in the commit body, such as `Validation: npm run lint && npm run build`.
+4. Treat `/apps/local-dope-wars/` as the required default Vite base path for npm build validation unless the user explicitly asks for a different deployment target.
 
 ## Current State
 
@@ -133,10 +138,10 @@ When asked to create a commit:
 - The current built-in content still defaults to the Gwinnett County location set.
 - A typed content-pack foundation now includes a player-facing launch-screen picker and more than one bundled starter pack.
 - A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
-- Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, debt-collector pressure, and pawnable defensive gear are now live, but longer-term combat systems are still pending.
+- Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, debt-collector pressure, pawnable defensive gear, and first-pass cop-stop encounter decisions are now live, but broader combat systems are still pending.
 - A typed event spotlight layer now drives popup windows for market shocks, collectors, and travel encounters, with room for future illustrated encounter art.
 - A growing Vitest regression suite now covers core content-pack, travel, market-event, finance-pressure, pawn-flow, storage/save normalization, and key browser-like app flows in `jsdom`.
-- Save/load depth, deeper pawn/bank systems, broader combat depth, and endgame polish are still pending.
+- Save/load depth, deeper pawn/bank systems, broader combat depth beyond the first cop-stop choice flow, and endgame polish are still pending.
 
 ## Good Next Steps
 
