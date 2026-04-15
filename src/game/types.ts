@@ -2,6 +2,7 @@ export type DrugId = string
 export type CityId = string
 export type ContentPackId = string
 export type LocaleId = string
+export type GearItemId = string
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert' | 'encounter'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
@@ -49,6 +50,19 @@ export interface DrugDefinition {
   cheap?: MarketTrigger
   expensive?: MarketTrigger
   marketEvents?: MarketEventDefinition[]
+}
+
+export interface GearItemDefinition {
+  id: GearItemId
+  label: string
+  flavor: string
+  accent: string
+  category: 'weapon' | 'armor'
+  cost: number
+  defense: number
+  maxOwned: number
+  pawnBaseValue: number
+  pawnDecayRate: number
 }
 
 export interface CityDefinition {
@@ -141,6 +155,7 @@ export interface GameState {
   cash: number
   currentCityId: CityId
   inventory: Record<DrugId, number>
+  gear: Record<GearItemId, number>
   market: Record<DrugId, MarketOffer>
   news: NewsItem[]
   newsCursor: number
@@ -167,6 +182,7 @@ export interface RunSummary {
   bankDeposit: number
   health: number
   inventoryValue: number
+  gearValue: number
   stashUsed: number
   totalSpace: number
   score: number

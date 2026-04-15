@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { GAME_CONFIG } from '../src/game/content'
 import {
+  buyGear,
   createNewGame,
   getDailyBankYield,
   getDebtCollectionChance,
   payPawnDebt,
+  pawnGear,
   takePawnAdvance,
   travelToCity,
 } from '../src/game/core'
@@ -187,5 +189,74 @@ describe('game core regressions', () => {
     expect(rejected.cash).toBe(nearLimit.cash)
     expect(rejected.pawnDebt).toBe(nearLimit.pawnDebt)
     expect(rejected.news[0]?.text).toBe(DEFAULT_LOCALE.game.pawnTooHigh)
+  })
+
+  it('reduces rough-stop damage when defensive gear is equipped', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const bareState = {
+      ...baseGame,
+      currentCityId: 'duluth',
+      cash: 0,
+      inventory: Object.fromEntries(
+        Object.keys(baseGame.inventory).map((drugId) => [drugId, 0]),
+      ) as typeof baseGame.inventory,
+      gear: {
+        ...baseGame.gear,
+        'kevlar-vest': 0,
+      },
+    }
+    const armoredState = {
+      ...bareState,
+      gear: {
+        ...bareState.gear,
+        'kevlar-vest': 1,
+      },
+    }
+
+    mockRandomSequence([], 0)
+    const bareResult = travelToCity(bareState, 'lawrenceville')
+    vi.restoreAllMocks()
+
+    mockRandomSequence([], 0)
+    const armoredResult = travelToCity(armoredState, 'lawrenceville')
+
+    expect(bareResult.health).toBe(92)
+    expect(armoredResult.health).toBe(95)
+    expect(armoredResult.health).toBeGreaterThan(bareResult.health)
+    expect(armoredResult.news[0]?.spotlight?.artKey).toBe('rough-stop')
+  })
+
+  it('pawns duplicate gear with diminishing returns', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const stocked = {
+      ...baseGame,
+      cash: 0,
+      gear: {
+        ...baseGame.gear,
+        switchblade: 2,
+      },
+    }
+
+    const firstPawn = pawnGear(stocked, 'switchblade')
+    const secondPawn = pawnGear(firstPawn, 'switchblade')
+    const rebought = buyGear(
+      {
+        ...baseGame,
+        cash: 1_000,
+      },
+      'switchblade',
+    )
+
+    expect(firstPawn.cash).toBe(187)
+    expect(secondPawn.cash - firstPawn.cash).toBe(260)
+    expect(secondPawn.cash).toBe(447)
+    expect(rebought.gear.switchblade).toBe(1)
+    expect(rebought.cash).toBe(550)
   })
 })

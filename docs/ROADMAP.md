@@ -13,19 +13,19 @@ Completed:
 - Dedicated SVG map scene in `src/components/MapScene.tsx`
 - Art direction brief in `docs/art-direction.md`
 - Local save/load, high scores, and run summary flow
-- Finance layer with bank actions, debt pressure, bank yield, and emergency pawn advances
+- Finance layer with bank actions, debt pressure, bank yield, emergency pawn advances, and pawnable defensive gear
 - Typed market event tables and heat/health encounter systems
 - Text-first event spotlight popups for market shocks, collectors, and travel encounters
-- Automated regression coverage for core gameplay and storage/save normalization plus lint/test/build verification flow
+- Automated regression coverage for core gameplay, storage/save normalization, and key browser-like UI flows plus lint/test/build verification flow
 - The current built-in content pack still defaults to the original Gwinnett County setting
 
 Still missing:
 
 - Broader i18n coverage
 - More configurable location/content packs beyond the built-in defaults
-- Deeper combat/endgame systems
+- Deeper combat/endgame systems on top of the new defensive gear lane
 - Production-ready art assets
-- Broader browser-level save/load and UI automated coverage
+- Broader browser-level save/load and UI automated coverage beyond the current smoke paths
 - Endgame polish and progression balance
 
 ## Guiding Priorities
@@ -190,9 +190,9 @@ Definition of done:
 
 1. Save/load and endgame flow
 2. Localization/content work for customizable location packs
-3. Bank/pawn mechanics
+3. Bank/pawn mechanics and defensive gear follow-through
 4. Random events and cops/heat gameplay
-5. Core tests
+5. Core and browser-level tests
 6. Custom map art and iconography
 
 ## Nice-To-Haves
