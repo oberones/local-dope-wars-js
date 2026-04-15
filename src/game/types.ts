@@ -5,6 +5,7 @@ export type LocaleId = string
 
 export type NewsTone = 'system' | 'move' | 'market' | 'alert' | 'encounter'
 export type MarketModifier = 'standard' | 'cheap' | 'expensive'
+export type EventSpotlightTone = 'market' | 'alert' | 'encounter'
 export type MarketEventKind =
   | 'flood'
   | 'shortage'
@@ -12,6 +13,17 @@ export type MarketEventKind =
   | 'bust'
   | 'lucky-break'
 export type ActivityKind = 'run' | 'travel' | 'trade' | 'finance' | 'encounter'
+export type EventSpotlightArtKey =
+  | 'market-flood'
+  | 'market-shortage'
+  | 'market-raid'
+  | 'market-bust'
+  | 'market-lucky-break'
+  | 'collector'
+  | 'lucky-break'
+  | 'stash-sweep'
+  | 'shakedown'
+  | 'rough-stop'
 
 export interface PriceBand {
   min: number
@@ -95,6 +107,15 @@ export interface NewsItem {
   id: number
   tone: NewsTone
   text: string
+  spotlight?: EventSpotlight
+}
+
+export interface EventSpotlight {
+  tone: EventSpotlightTone
+  title: string
+  detail: string
+  artKey: EventSpotlightArtKey
+  artLabel: string
 }
 
 export interface ActivityItem {

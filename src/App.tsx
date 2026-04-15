@@ -48,8 +48,10 @@ import type {
   ContentPackDefinition,
   ContentPackId,
   DrugId,
+  EventSpotlight,
   GameState,
   HighScoreEntry,
+  NewsItem,
 } from './game/types'
 
 type AppScreen = 'menu' | 'run' | 'summary'
@@ -180,6 +182,20 @@ function tradeHint(
   }
 }
 
+function getPendingSpotlights(
+  game: GameState | null,
+  seenSpotlightNewsId: number,
+) {
+  if (!game) {
+    return []
+  }
+
+  return [...game.news]
+    .filter((item): item is NewsItem & { spotlight: EventSpotlight } =>
+      Boolean(item.spotlight) && item.id > seenSpotlightNewsId)
+    .sort((left, right) => left.id - right.id)
+}
+
 function App() {
   const [screen, setScreen] = useState<AppScreen>('menu')
   const [game, setGame] = useState<GameState | null>(null)
@@ -198,6 +214,7 @@ function App() {
     () => createTradeDrafts(),
   )
   const [financeDrafts, setFinanceDrafts] = useState(createFinanceDrafts)
+  const [seenSpotlightNewsId, setSeenSpotlightNewsId] = useState(-1)
 
   useEffect(() => {
     if (screen !== 'run' || !game) {
@@ -211,7 +228,7 @@ function App() {
     saveSelectedContentPackId(selectedContentPackId)
   }, [selectedContentPackId])
 
-  function openRun(nextGame: GameState) {
+  function openRun(nextGame: GameState, replayExistingSpotlights: boolean) {
     const nextContent = getContentPack(nextGame.contentPackId)
 
     setGame(nextGame)
@@ -219,13 +236,14 @@ function App() {
     setFocusedCityId(nextGame.currentCityId)
     setTradeDrafts(createTradeDrafts(nextContent.drugs.map((drug) => drug.id)))
     setFinanceDrafts(createFinanceDrafts())
+    setSeenSpotlightNewsId(replayExistingSpotlights ? -1 : nextGame.newsCursor - 1)
     setScreen('run')
   }
 
   function startNewRun() {
     clearSavedGame()
     setResumeGame(null)
-    openRun(createNewGame(selectedContentPackId))
+    openRun(createNewGame(selectedContentPackId), true)
   }
 
   function continueSavedRun() {
@@ -233,7 +251,7 @@ function App() {
       return
     }
 
-    openRun(resumeGame)
+    openRun(resumeGame, false)
   }
 
   function saveAndReturnToMenu() {
@@ -269,6 +287,9 @@ function App() {
     setFinanceDrafts(createFinanceDrafts())
     setScreen('summary')
   }
+
+  const pendingSpotlights =
+    screen === 'run' ? getPendingSpotlights(game, seenSpotlightNewsId) : []
 
   function setDraft(drugId: DrugId, nextValue: string) {
     setTradeDrafts((current) => ({
@@ -735,9 +756,64 @@ function App() {
       ? locale.hints.pawnDebtCleared
       : locale.hints.noCashForPawn,
   )
+  const activeSpotlight =
+    pendingSpotlights[0] ?
+      {
+        ...pendingSpotlights[0].spotlight,
+        newsId: pendingSpotlights[0].id,
+      }
+    : null
+  const dismissSpotlight = () => {
+    if (!activeSpotlight) {
+      return
+    }
+
+    setSeenSpotlightNewsId(activeSpotlight.newsId)
+  }
 
   return (
-    <main className="shell">
+    <>
+      {activeSpotlight ? (
+        <div className="event-modal-backdrop" role="presentation">
+          <section
+            className={`event-modal event-modal--${activeSpotlight.tone}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="event-modal-title"
+            aria-describedby="event-modal-detail"
+          >
+            <div className="event-modal__header">
+              <div>
+                <p className="eyebrow">
+                  {locale.spotlight.toneLabel(activeSpotlight.tone)}
+                </p>
+                <h2 id="event-modal-title">{activeSpotlight.title}</h2>
+              </div>
+              <p className="event-modal__queue">
+                {locale.run.spotlightQueue(pendingSpotlights.length)}
+              </p>
+            </div>
+            <div className="event-modal__body">
+              <div
+                className={`event-modal__art event-modal__art--${activeSpotlight.artKey}`}
+                aria-hidden="true"
+              >
+                <span>{activeSpotlight.artLabel}</span>
+              </div>
+              <p id="event-modal-detail" className="event-modal__detail">
+                {activeSpotlight.detail}
+              </p>
+            </div>
+            <div className="event-modal__actions">
+              <button className="accent-button" onClick={dismissSpotlight}>
+                {locale.run.spotlightDismiss}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      <main className="shell">
       <header className="panel hero">
         <div className="hero__copy">
           <p className="eyebrow">{locale.run.dashboardEyebrow}</p>
@@ -1440,7 +1516,8 @@ function App() {
           })}
         </div>
       </section>
-    </main>
+      </main>
+    </>
   )
 }
 
