@@ -19,14 +19,18 @@ import {
   getMaxDepositAmount,
   getHealthRecoveryCost,
   getMaxHealthRecoveryAmount,
+  getMaxPawnAdvanceAmount,
+  getMaxPawnRepayment,
   getMaxSellQuantity,
   getMaxWithdrawAmount,
   getNetWorth,
   getUsedSpace,
   isRunOver,
+  payPawnDebt,
   payDebt,
   recoverHealth,
   sellDrug,
+  takePawnAdvance,
   travelToCity,
   withdrawCash,
 } from './game/core'
@@ -49,7 +53,7 @@ import type {
 } from './game/types'
 
 type AppScreen = 'menu' | 'run' | 'summary'
-type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'borrow'
+type FinanceDraftKey = 'deposit' | 'withdraw' | 'payDebt' | 'pawn' | 'payPawn' | 'borrow'
 const locale = DEFAULT_LOCALE
 
 function createTradeDrafts(drugIds = DEFAULT_CONTENT_PACK.drugs.map((drug) => drug.id)) {
@@ -67,6 +71,8 @@ function createFinanceDrafts() {
     deposit: '',
     withdraw: '',
     payDebt: '',
+    pawn: '',
+    payPawn: '',
     borrow: '',
   }
 }
@@ -380,7 +386,7 @@ function App() {
                 ? locale.menu.savedRunSummary(
                     resumeSummary.score,
                     resumeSummary.cash,
-                    resumeSummary.debt,
+                    resumeSummary.debt + resumeSummary.pawnDebt,
                   )
                 : locale.menu.freshRunSummary(resumeContent.shortLabel)}
             </p>
@@ -562,6 +568,10 @@ function App() {
               <p className="meta-label">{locale.summary.debtLabel}</p>
               <p>{locale.formatMoney(lastSummary.debt)}</p>
             </article>
+            <article className="summary-stat">
+              <p className="meta-label">{locale.summary.pawnLabel}</p>
+              <p>{locale.formatMoney(lastSummary.pawnDebt)}</p>
+            </article>
           </div>
 
           <div className="summary-screen__actions">
@@ -627,7 +637,9 @@ function App() {
   const maxDeposit = getMaxDepositAmount(game)
   const maxWithdraw = getMaxWithdrawAmount(game)
   const maxDebtPayment = getMaxDebtPayment(game)
+  const maxPawnRepayment = getMaxPawnRepayment(game)
   const maxBorrow = getMaxBorrowAmount(game)
+  const maxPawnAdvance = getMaxPawnAdvanceAmount(game)
   const dailyBankYield = getDailyBankYield(game)
   const debtCollectionChance = getDebtCollectionChance(game)
   const healthRecoveryAmount = getMaxHealthRecoveryAmount(game)
@@ -635,6 +647,8 @@ function App() {
   const depositAmount = parsePositiveInteger(financeDrafts.deposit)
   const withdrawAmount = parsePositiveInteger(financeDrafts.withdraw)
   const debtPaymentAmount = parsePositiveInteger(financeDrafts.payDebt)
+  const pawnAmount = parsePositiveInteger(financeDrafts.pawn)
+  const pawnPaymentAmount = parsePositiveInteger(financeDrafts.payPawn)
   const borrowAmount = parsePositiveInteger(financeDrafts.borrow)
   const cheapestOffer =
     liveOffers.length > 0
@@ -706,6 +720,18 @@ function App() {
     maxBorrow,
     locale.run.borrowButton,
     locale.hints.loanCeilingReached,
+  )
+  const pawnHint = actionLimitHint(
+    pawnAmount,
+    maxPawnAdvance,
+    locale.run.pawnAdvanceButton,
+    locale.hints.noPawnRoom,
+  )
+  const payPawnHint = actionLimitHint(
+    pawnPaymentAmount,
+    maxPawnRepayment,
+    locale.run.payPawnButton,
+    game.pawnDebt <= 0 ? locale.hints.noPawnRoom : locale.hints.noCashForPawn,
   )
 
   return (
@@ -904,8 +930,16 @@ function App() {
               <p>{locale.formatMoney(game.debt)}</p>
             </div>
             <div className="finance-summary-card">
+              <p className="meta-label">{locale.run.pawnBalance}</p>
+              <p>{locale.formatMoney(game.pawnDebt)}</p>
+            </div>
+            <div className="finance-summary-card">
               <p className="meta-label">{locale.run.creditRemaining}</p>
               <p>{locale.formatMoney(maxBorrow)}</p>
+            </div>
+            <div className="finance-summary-card">
+              <p className="meta-label">{locale.run.pawnHeadroom}</p>
+              <p>{locale.formatMoney(maxPawnAdvance)}</p>
             </div>
             <div className="finance-summary-card">
               <p className="meta-label">{locale.run.nextBankYield}</p>
@@ -1045,6 +1079,70 @@ function App() {
                 }`}
               >
                 {payDebtHint.text}
+              </p>
+            </label>
+
+            <label className="finance-control">
+              <span>{locale.run.pawnAdvanceLabel}</span>
+              <div className="finance-control__row">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={financeDrafts.pawn}
+                  onChange={(event) =>
+                    setFinanceDraft('pawn', event.target.value)
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  disabled={
+                    pawnAmount === null ||
+                    maxPawnAdvance <= 0 ||
+                    pawnAmount > maxPawnAdvance
+                  }
+                  onClick={() => commitFinanceAction('pawn', takePawnAdvance)}
+                >
+                  {locale.run.pawnAdvanceButton}
+                </button>
+              </div>
+              <p
+                className={`finance-control__hint${
+                  pawnHint.error ? ' finance-control__hint--error' : ''
+                }`}
+              >
+                {pawnHint.text}
+              </p>
+            </label>
+
+            <label className="finance-control">
+              <span>{locale.run.payPawnLabel}</span>
+              <div className="finance-control__row">
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={financeDrafts.payPawn}
+                  onChange={(event) =>
+                    setFinanceDraft('payPawn', event.target.value)
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  disabled={
+                    pawnPaymentAmount === null ||
+                    maxPawnRepayment <= 0 ||
+                    pawnPaymentAmount > maxPawnRepayment
+                  }
+                  onClick={() => commitFinanceAction('payPawn', payPawnDebt)}
+                >
+                  {locale.run.payPawnButton}
+                </button>
+              </div>
+              <p
+                className={`finance-control__hint${
+                  payPawnHint.error ? ' finance-control__hint--error' : ''
+                }`}
+              >
+                {payPawnHint.text}
               </p>
             </label>
 
