@@ -12,9 +12,21 @@ type StoredGameState = Omit<GameState, 'pawnDebt' | 'gear' | 'pendingEncounter'>
   pendingEncounter?: PendingEncounter | null
 }
 
-type StoredHighScoreEntry = Omit<HighScoreEntry, 'pawnDebt' | 'gearValue'> & {
+type StoredHighScoreEntry = Omit<
+  HighScoreEntry,
+  | 'pawnDebt'
+  | 'gearValue'
+  | 'netWorth'
+  | 'inventoryCloseoutPenalty'
+  | 'healthCloseoutPenalty'
+  | 'closeoutPenalty'
+> & {
   pawnDebt?: number
   gearValue?: number
+  netWorth?: number
+  inventoryCloseoutPenalty?: number
+  healthCloseoutPenalty?: number
+  closeoutPenalty?: number
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -170,6 +182,13 @@ function isStoredHighScoreEntry(value: unknown): value is StoredHighScoreEntry {
     typeof value.health === 'number' &&
     typeof value.inventoryValue === 'number' &&
     (typeof value.gearValue === 'number' || typeof value.gearValue === 'undefined') &&
+    (typeof value.netWorth === 'number' || typeof value.netWorth === 'undefined') &&
+    (typeof value.inventoryCloseoutPenalty === 'number' ||
+      typeof value.inventoryCloseoutPenalty === 'undefined') &&
+    (typeof value.healthCloseoutPenalty === 'number' ||
+      typeof value.healthCloseoutPenalty === 'undefined') &&
+    (typeof value.closeoutPenalty === 'number' ||
+      typeof value.closeoutPenalty === 'undefined') &&
     typeof value.stashUsed === 'number' &&
     typeof value.totalSpace === 'number' &&
     typeof value.score === 'number' &&
@@ -199,6 +218,10 @@ function normalizeHighScore(entry: StoredHighScoreEntry): HighScoreEntry {
     ...entry,
     pawnDebt: entry.pawnDebt ?? 0,
     gearValue: entry.gearValue ?? 0,
+    netWorth: entry.netWorth ?? entry.score,
+    inventoryCloseoutPenalty: entry.inventoryCloseoutPenalty ?? 0,
+    healthCloseoutPenalty: entry.healthCloseoutPenalty ?? 0,
+    closeoutPenalty: entry.closeoutPenalty ?? 0,
   }
 }
 

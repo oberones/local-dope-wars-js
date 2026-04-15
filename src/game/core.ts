@@ -438,6 +438,42 @@ export function getAvailableSpace(state: GameState) {
   return state.totalSpace - getUsedSpace(state)
 }
 
+export function getDaysRemaining(state: GameState) {
+  return Math.max(state.endDay - state.day, 0)
+}
+
+export function getFinalStretchPressure(state: GameState) {
+  const daysRemaining = getDaysRemaining(state)
+
+  if (daysRemaining > GAME_CONFIG.finalStretchDays) {
+    return 0
+  }
+
+  return Math.min(
+    (GAME_CONFIG.finalStretchDays - daysRemaining + 1) / GAME_CONFIG.finalStretchDays,
+    1,
+  )
+}
+
+function getInventoryCloseoutPenalty(state: GameState) {
+  return Math.round(getInventoryValue(state) * GAME_CONFIG.closeoutInventoryPenaltyRate)
+}
+
+function getHealthCloseoutPenalty(state: GameState) {
+  return Math.max(
+    GAME_CONFIG.maxHealth - state.health,
+    0,
+  ) * GAME_CONFIG.closeoutHealthPenaltyPerMissingPoint
+}
+
+export function getCloseoutPenalty(state: GameState) {
+  return getInventoryCloseoutPenalty(state) + getHealthCloseoutPenalty(state)
+}
+
+export function getProjectedFinalScore(state: GameState) {
+  return getNetWorth(state) - getCloseoutPenalty(state)
+}
+
 function getLargestInventoryHolding(state: GameState) {
   const content = getContentPack(state.contentPackId)
 
@@ -467,9 +503,11 @@ function getLargestInventoryHolding(state: GameState) {
   )
 }
 
-function getTravelEncounterChance(cops: number) {
+function getTravelEncounterChance(state: GameState, cops: number) {
   return Math.min(
-    GAME_CONFIG.travelEncounterBaseChance + cops * GAME_CONFIG.travelEncounterHeatFactor,
+    GAME_CONFIG.travelEncounterBaseChance +
+      cops * GAME_CONFIG.travelEncounterHeatFactor +
+      getFinalStretchPressure(state) * GAME_CONFIG.finalStretchEncounterChanceBonus,
     GAME_CONFIG.travelEncounterMaxChance,
   )
 }
@@ -492,6 +530,7 @@ export function getDebtCollectionChance(state: GameState) {
 
   return Math.min(
     GAME_CONFIG.debtCollectionBaseChance +
+      getFinalStretchPressure(state) * GAME_CONFIG.finalStretchCollectorChanceBonus +
       (state.debt - GAME_CONFIG.debtCollectionThreshold) /
         GAME_CONFIG.debtCollectionDebtChanceDivisor,
     GAME_CONFIG.debtCollectionMaxChance,
@@ -511,6 +550,7 @@ function resolveDebtCollection(state: GameState, city: ReturnType<typeof getCurr
     Math.round(
       state.debt *
         (GAME_CONFIG.debtCollectionBaseShare +
+          getFinalStretchPressure(state) * GAME_CONFIG.finalStretchCollectorTakeShareBonus +
           debtOverage / GAME_CONFIG.debtCollectionDebtShareDivisor),
     ),
   )
@@ -572,7 +612,7 @@ function resolveDebtCollection(state: GameState, city: ReturnType<typeof getCurr
 }
 
 function resolveTravelEncounter(state: GameState, city: ReturnType<typeof getCurrentCity>) {
-  if (Math.random() >= getTravelEncounterChance(city.cops)) {
+  if (Math.random() >= getTravelEncounterChance(state, city.cops)) {
     return state
   }
 
@@ -1329,7 +1369,11 @@ export function getScoreTier(
 }
 
 export function buildRunSummary(state: GameState): RunSummary {
-  const score = getNetWorth(state)
+  const netWorth = getNetWorth(state)
+  const inventoryCloseoutPenalty = getInventoryCloseoutPenalty(state)
+  const healthCloseoutPenalty = getHealthCloseoutPenalty(state)
+  const closeoutPenalty = inventoryCloseoutPenalty + healthCloseoutPenalty
+  const score = netWorth - closeoutPenalty
   const content = getContentPack(state.contentPackId)
 
   return {
@@ -1347,6 +1391,10 @@ export function buildRunSummary(state: GameState): RunSummary {
     health: state.health,
     inventoryValue: getInventoryValue(state),
     gearValue: getGearValue(state),
+    netWorth,
+    inventoryCloseoutPenalty,
+    healthCloseoutPenalty,
+    closeoutPenalty,
     stashUsed: getUsedSpace(state),
     totalSpace: state.totalSpace,
     score,
@@ -1407,6 +1455,12 @@ export function travelToCity(state: GameState, cityId: CityId) {
   const city = content.citiesById[cityId] ?? content.cities[0]
   const { market, bulletins } = buildMarket(state.contentPackId, cityId)
   const bankYield = getDailyBankYield(state)
+  const enteredFinalStretch =
+    getFinalStretchPressure(state) === 0 &&
+    getFinalStretchPressure({
+      ...state,
+      day: state.day + 1,
+    }) > 0
   const nextState: GameState = {
     ...state,
     currentCityId: cityId,
@@ -1423,6 +1477,14 @@ export function travelToCity(state: GameState, cityId: CityId) {
         tone: 'move',
         text: locale.game.shiftedOperations(city.label, city.cops),
       },
+      ...(enteredFinalStretch
+        ? [
+            {
+              tone: 'alert' as const,
+              text: locale.game.finalStretchReached,
+            },
+          ]
+        : []),
       ...(nextState.day >= nextState.endDay
         ? [
             {
@@ -1448,6 +1510,16 @@ export function travelToCity(state: GameState, cityId: CityId) {
         locale.game.movedToTitle(city.label),
         locale.game.movedToDetail(nextState.debt, nextState.day),
       ),
+      ...(enteredFinalStretch
+        ? [
+            createActivity(
+              nextState,
+              'run',
+              locale.game.finalStretchTitle,
+              locale.game.finalStretchDetail(city.label),
+            ),
+          ]
+        : []),
       ...(bankYield > 0
         ? [
             createActivity(

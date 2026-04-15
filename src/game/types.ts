@@ -214,6 +214,10 @@ export interface RunSummary {
   health: number
   inventoryValue: number
   gearValue: number
+  netWorth: number
+  inventoryCloseoutPenalty: number
+  healthCloseoutPenalty: number
+  closeoutPenalty: number
   stashUsed: number
   totalSpace: number
   score: number

@@ -2,10 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { GAME_CONFIG } from '../src/game/content'
 import {
+  buildRunSummary,
   buyGear,
   createNewGame,
   getDailyBankYield,
   getDebtCollectionChance,
+  getFinalStretchPressure,
+  getProjectedFinalScore,
   payPawnDebt,
   pawnGear,
   resolvePendingEncounter,
@@ -124,6 +127,27 @@ describe('game core regressions', () => {
     })
   })
 
+  it('ramps final-stretch pressure and collector risk near the end of a run', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const earlyState = {
+      ...baseGame,
+      day: 8,
+      debt: GAME_CONFIG.debtCollectionThreshold + 1_000,
+    }
+    const lateState = {
+      ...baseGame,
+      day: 28,
+      debt: GAME_CONFIG.debtCollectionThreshold + 1_000,
+    }
+
+    expect(getFinalStretchPressure(earlyState)).toBe(0)
+    expect(getFinalStretchPressure(lateState)).toBeGreaterThan(0)
+    expect(getDebtCollectionChance(lateState)).toBeGreaterThan(getDebtCollectionChance(earlyState))
+  })
+
   it('blocks travel when the player is too hurt to move', () => {
     const randomSpy = mockRandomSequence([], 0.999)
     const baseGame = createNewGame('gwinnett-county')
@@ -140,6 +164,25 @@ describe('game core regressions', () => {
     expect(next.day).toBe(state.day)
     expect(next.currentCityId).toBe(state.currentCityId)
     expect(next.news[0]?.text).toBe(DEFAULT_LOCALE.game.tooHurtToMove)
+  })
+
+  it('flags when the run enters the final stretch', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const state = {
+      ...baseGame,
+      day: 24,
+    }
+
+    const next = travelToCity(state, 'duluth')
+
+    expect(next.day).toBe(25)
+    expect(next.news.some((item) => item.text === DEFAULT_LOCALE.game.finalStretchReached)).toBe(true)
+    expect(
+      next.activity.some((item) => item.title === DEFAULT_LOCALE.game.finalStretchTitle),
+    ).toBe(true)
   })
 
   it('supports pawn advances with harsher debt pressure and repayment', () => {
@@ -296,6 +339,41 @@ describe('game core regressions', () => {
         choices: ['flee', 'fight', 'surrender'],
       },
     })
+  })
+
+  it('applies closeout penalties for unsold stash and injuries in the final score preview', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const state = {
+      ...baseGame,
+      health: 72,
+      cash: 6_000,
+      debt: 2_000,
+      inventory: {
+        ...baseGame.inventory,
+        meth: 5,
+      },
+      market: {
+        ...baseGame.market,
+        meth: {
+          drugId: 'meth' as const,
+          available: true,
+          price: 1_200,
+          modifier: 'standard' as const,
+        },
+      },
+    }
+
+    const summary = buildRunSummary(state)
+
+    expect(summary.netWorth).toBe(10_000)
+    expect(summary.inventoryCloseoutPenalty).toBe(2_100)
+    expect(summary.healthCloseoutPenalty).toBe(1_120)
+    expect(summary.closeoutPenalty).toBe(3_220)
+    expect(summary.score).toBe(6_780)
+    expect(getProjectedFinalScore(state)).toBe(summary.score)
   })
 
   it('resolves pending cop-stop choices through the core rules', () => {

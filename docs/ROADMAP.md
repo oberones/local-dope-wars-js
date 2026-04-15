@@ -14,6 +14,7 @@ Completed:
 - Art direction brief in `docs/art-direction.md`
 - Local save/load, high scores, and run summary flow
 - Finance layer with bank actions, debt pressure, bank yield, emergency pawn advances, pawnable defensive gear, and first-pass decision-based encounter choices
+- Final-stretch endgame pressure with higher late-run risk and closeout score penalties for injuries and unsold stash
 - Typed market event tables and heat/health encounter systems
 - Text-first event spotlight popups for market shocks, collectors, and travel encounters
 - Automated regression coverage for core gameplay, storage/save normalization, and key browser-like UI flows plus lint/test/build verification flow

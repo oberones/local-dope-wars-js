@@ -11,10 +11,12 @@ import {
   buyDrug,
   createNewGame,
   depositCash,
+  getCloseoutPenalty,
   getCurrentCity,
   getDailyBankYield,
   getDefenseRating,
   getDebtCollectionChance,
+  getFinalStretchPressure,
   getGearValue,
   getMaxBorrowAmount,
   getMaxBuyQuantity,
@@ -30,6 +32,7 @@ import {
   getMaxSellQuantity,
   getMaxWithdrawAmount,
   getNetWorth,
+  getProjectedFinalScore,
   getUsedSpace,
   isRunOver,
   payPawnDebt,
@@ -787,6 +790,10 @@ function App() {
               <p>{locale.formatMoney(lastSummary.bankDeposit)}</p>
             </article>
             <article className="summary-stat">
+              <p className="meta-label">{locale.summary.netWorthLabel}</p>
+              <p>{locale.formatMoney(lastSummary.netWorth)}</p>
+            </article>
+            <article className="summary-stat">
               <p className="meta-label">{locale.summary.inventoryValueLabel}</p>
               <p>{locale.formatMoney(lastSummary.inventoryValue)}</p>
             </article>
@@ -801,6 +808,18 @@ function App() {
             <article className="summary-stat">
               <p className="meta-label">{locale.summary.pawnLabel}</p>
               <p>{locale.formatMoney(lastSummary.pawnDebt)}</p>
+            </article>
+            <article className="summary-stat">
+              <p className="meta-label">{locale.summary.closeoutPenaltyLabel}</p>
+              <p>{locale.formatMoney(lastSummary.closeoutPenalty)}</p>
+            </article>
+            <article className="summary-stat">
+              <p className="meta-label">{locale.summary.inventoryPenaltyLabel}</p>
+              <p>{locale.formatMoney(lastSummary.inventoryCloseoutPenalty)}</p>
+            </article>
+            <article className="summary-stat">
+              <p className="meta-label">{locale.summary.healthPenaltyLabel}</p>
+              <p>{locale.formatMoney(lastSummary.healthCloseoutPenalty)}</p>
             </article>
           </div>
 
@@ -858,6 +877,9 @@ function App() {
   const focusedCity = getCityById(focusedCityId, cities)
   const usedSpace = getUsedSpace(game)
   const runValue = getNetWorth(game)
+  const projectedFinalScore = getProjectedFinalScore(game)
+  const closeoutPenalty = getCloseoutPenalty(game)
+  const finalStretchPressure = getFinalStretchPressure(game)
   const defenseRating = getDefenseRating(game)
   const gearValue = getGearValue(game)
   const runClosed = isRunOver(game)
@@ -1115,7 +1137,13 @@ function App() {
                 ? locale.run.finalDayNote
                 : travelLockedByHealth
                   ? locale.run.streetMedicTravelLock
-                : locale.run.activeRunNote(daysRemaining)}
+                  : finalStretchPressure > 0
+                    ? locale.run.finalStretchNote(
+                        Math.round(finalStretchPressure * 100),
+                        projectedFinalScore,
+                        closeoutPenalty,
+                      )
+                  : locale.run.activeRunNote(daysRemaining)}
             </p>
           </div>
           <div className="hero__actions">
@@ -1140,8 +1168,12 @@ function App() {
           </div>
           <div className="run-status__actions">
             <div>
-              <p className="meta-label">{locale.run.currentScorePreview}</p>
-              <p className="run-status__value">{locale.formatMoney(runValue)}</p>
+              <p className="meta-label">{locale.run.projectedFinalScore}</p>
+              <p className="run-status__value">{locale.formatMoney(projectedFinalScore)}</p>
+            </div>
+            <div>
+              <p className="meta-label">{locale.run.closeoutPenalty}</p>
+              <p className="run-status__value">{locale.formatMoney(closeoutPenalty)}</p>
             </div>
             <button className="accent-button" onClick={finalizeRun}>
               {locale.run.finalizeRun}
@@ -1172,6 +1204,10 @@ function App() {
           <p className="stat-card__value">{locale.formatMoney(game.debt)}</p>
         </article>
         <article className="panel stat-card">
+          <p className="meta-label">{locale.run.finalStretchPressure}</p>
+          <p className="stat-card__value">{Math.round(finalStretchPressure * 100)}%</p>
+        </article>
+        <article className="panel stat-card">
           <p className="meta-label">{locale.run.stashSpace}</p>
           <p className="stat-card__value">
             {usedSpace}/{game.totalSpace}
@@ -1180,6 +1216,10 @@ function App() {
         <article className="panel stat-card">
           <p className="meta-label">{locale.run.runValue}</p>
           <p className="stat-card__value">{locale.formatMoney(runValue)}</p>
+        </article>
+        <article className="panel stat-card">
+          <p className="meta-label">{locale.run.projectedFinalScore}</p>
+          <p className="stat-card__value">{locale.formatMoney(projectedFinalScore)}</p>
         </article>
       </section>
 
