@@ -377,4 +377,94 @@ describe('game core regressions', () => {
       DEFAULT_LOCALE.game.surrenderedCopStopNews(0, 2),
     )
   })
+
+  it('creates a pending jacker ambush when traveling with stash on hand', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const state = {
+      ...baseGame,
+      currentCityId: 'duluth',
+      inventory: {
+        ...baseGame.inventory,
+        meth: 10,
+      },
+    }
+
+    mockRandomSequence([], 0)
+    const next = travelToCity(state, 'lawrenceville')
+
+    expect(next.pendingEncounter).toMatchObject({
+      kind: 'jacker-ambush',
+      cityId: 'lawrenceville',
+      drugId: 'meth',
+      drugLabel: 'Meth',
+    })
+    expect(next.news[0]?.spotlight).toMatchObject({
+      title: DEFAULT_LOCALE.game.jackerAmbushTitle,
+      artKey: 'jacker-ambush',
+      decision: {
+        kind: 'jacker-ambush',
+        choices: ['flee', 'fight', 'surrender'],
+      },
+    })
+  })
+
+  it('resolves jacker ambush choices through stash and combat outcomes', () => {
+    const randomSpy = mockRandomSequence([], 0.999)
+    const baseGame = createNewGame('gwinnett-county')
+    randomSpy.mockRestore()
+
+    const encounterState = {
+      ...baseGame,
+      currentCityId: 'lawrenceville',
+      health: 100,
+      inventory: {
+        ...baseGame.inventory,
+        meth: 12,
+      },
+      pendingEncounter: {
+        kind: 'jacker-ambush' as const,
+        newsId: 55,
+        cityId: 'lawrenceville',
+        cityLabel: 'Lawrenceville',
+        drugId: 'meth' as const,
+        drugLabel: 'Meth',
+        quantityDemand: 4,
+        baseDamage: 9,
+      },
+    }
+
+    const fled = resolvePendingEncounter(encounterState, 'flee')
+    const surrendered = resolvePendingEncounter(encounterState, 'surrender')
+
+    mockRandomSequence([], 0)
+    const wonFight = resolvePendingEncounter(
+      {
+        ...encounterState,
+        gear: {
+          ...encounterState.gear,
+          'snub-nose': 1,
+          'kevlar-vest': 1,
+        },
+      },
+      'fight',
+    )
+    vi.restoreAllMocks()
+
+    mockRandomSequence([], 0.999)
+    const lostFight = resolvePendingEncounter(encounterState, 'fight')
+
+    expect(fled.pendingEncounter).toBeNull()
+    expect(fled.health).toBe(91)
+    expect(surrendered.inventory.meth).toBe(8)
+    expect(wonFight.inventory.meth).toBe(12)
+    expect(wonFight.health).toBe(99)
+    expect(lostFight.inventory.meth).toBe(8)
+    expect(lostFight.health).toBe(87)
+    expect(lostFight.news[0]?.text).toBe(
+      DEFAULT_LOCALE.game.lostJackerFightNews(4, 'Meth', 13),
+    )
+  })
 })

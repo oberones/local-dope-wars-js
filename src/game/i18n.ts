@@ -1,5 +1,7 @@
 import type {
   ActivityKind,
+  EncounterChoiceId,
+  EncounterKind,
   EventSpotlightTone,
   LocaleId,
   MarketEventKind,
@@ -119,6 +121,18 @@ function formatHeatLabel(cops: number) {
   return 'Red hot'
 }
 
+function formatEncounterChoice(kind: EncounterKind, choice: EncounterChoiceId) {
+  if (choice === 'fight') {
+    return 'Fight back'
+  }
+
+  if (kind === 'cop-stop') {
+    return choice === 'flee' ? 'Floor it' : 'Pay up'
+  }
+
+  return choice === 'flee' ? 'Run it' : 'Drop the stash'
+}
+
 export const EN_US_LOCALE = {
   id: 'en-US' as LocaleId,
   label: 'English (US)',
@@ -134,6 +148,7 @@ export const EN_US_LOCALE = {
   formatMarketModifier,
   formatMarketEventKind,
   formatHeatLabel,
+  formatEncounterChoice,
   menu: {
     eyebrow: 'Starter content pack',
     heroLede: (contentLabel: string, description: string) =>
@@ -268,9 +283,8 @@ export const EN_US_LOCALE = {
     nextBankYield: 'Next bank yield',
     collectorRisk: 'Collector risk',
     spotlightDismiss: 'Keep moving',
-    spotlightFlee: 'Floor it',
-    spotlightFight: 'Fight back',
-    spotlightSurrender: 'Pay up',
+    spotlightChoice: (kind: EncounterKind, choice: EncounterChoiceId) =>
+      formatEncounterChoice(kind, choice),
     spotlightQueue: (count: number) =>
       count > 1 ? `${count} event windows queued` : 'Event window',
     depositLabel: 'Deposit to bank',
@@ -400,6 +414,37 @@ export const EN_US_LOCALE = {
     shakedownTitle: 'Roadside shakedown',
     shakedownDetail: (cityLabel: string, amount: number) =>
       `Heat on the way into ${cityLabel} forced you to drop ${formatMoney(amount)} to keep moving.`,
+    jackerAmbushNews: (cityLabel: string, drugLabel: string) =>
+      `A rival crew boxed you in near ${cityLabel} with eyes on your ${drugLabel}.`,
+    jackerAmbushTitle: 'Jacker ambush',
+    jackerAmbushDetail: (cityLabel: string, quantity: number, drugLabel: string) =>
+      `A rival crew corners you near ${cityLabel}. You can run it, fight back, or hand over ${quantity} ${drugLabel} to get free.`,
+    jackerAmbushActivity: (cityLabel: string, quantity: number, drugLabel: string) =>
+      `A rival crew near ${cityLabel} wants ${quantity} ${drugLabel} off your hands.`,
+    fledJackerNews: (healthLoss: number) =>
+      healthLoss > 0
+        ? `You ran the ambush and took ${healthLoss} health in the scramble.`
+        : 'You outran the ambush clean.',
+    fledJackerTitle: 'Ran the ambush',
+    fledJackerDetail: (cityLabel: string, health: number) =>
+      `You burned past the crew near ${cityLabel}. Health is now ${health}%.`,
+    surrenderedJackerNews: (quantity: number, drugLabel: string) =>
+      `You dropped ${quantity} ${drugLabel} to end the ambush without blood.`,
+    surrenderedJackerTitle: 'Dropped the stash',
+    surrenderedJackerDetail: (cityLabel: string, quantity: number, drugLabel: string) =>
+      `You gave up ${quantity} ${drugLabel} near ${cityLabel} so the route could stay open.`,
+    wonJackerFightNews: (healthLoss: number) =>
+      healthLoss > 0
+        ? `You beat back the crew but still lost ${healthLoss} health in the clash.`
+        : 'You beat back the crew without taking a real hit.',
+    wonJackerFightTitle: 'Beat the ambush',
+    wonJackerFightDetail: (cityLabel: string, health: number) =>
+      `You held the line near ${cityLabel}. Health is now ${health}%.`,
+    lostJackerFightNews: (quantity: number, drugLabel: string, healthLoss: number) =>
+      `The ambush went bad. You lost ${quantity} ${drugLabel} and ${healthLoss} health before breaking away.`,
+    lostJackerFightTitle: 'Lost the ambush',
+    lostJackerFightDetail: (cityLabel: string, quantity: number, drugLabel: string, health: number) =>
+      `The crew near ${cityLabel} ripped ${quantity} ${drugLabel} away and left your health at ${health}%.`,
     copStopNews: (cityLabel: string) =>
       `Blue lights hit behind you near ${cityLabel}. Decide fast.`,
     copStopTitle: 'Cop stop',
