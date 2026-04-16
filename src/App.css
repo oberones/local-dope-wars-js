@@ -688,6 +688,10 @@
   gap: 1rem;
 }
 
+.ops-venue-panel[hidden] {
+  display: none;
+}
+
 .finance-panel__summary,
 .finance-panel__grid {
   position: relative;
