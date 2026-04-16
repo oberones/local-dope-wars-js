@@ -1,3 +1,13 @@
+## 0.10.0 (2026-04-15)
+
+### Feat
+
+- add browser-local custom pack imports
+
+### Fix
+
+- harden custom pack import review followups
+
 ## 0.9.0 (2026-04-15)
 
 ### Feat
