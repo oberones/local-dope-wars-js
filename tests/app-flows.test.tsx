@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 import App from '../src/App'
 import { createNewGame } from '../src/game/core'
 import { saveGame } from '../src/game/storage'
+import { SAVANNAH_PACK } from './fixtures/content-packs'
 
 function renderApp() {
   const user = userEvent.setup()
@@ -74,6 +75,22 @@ describe('app browser flows', () => {
     const pawnPanel = await screen.findByRole('tabpanel', { name: 'Pawn shop' })
     expect(within(pawnPanel).getByText('Patch up')).toBeTruthy()
     expect(within(pawnPanel).queryByRole('button', { name: 'Borrow' })).toBeNull()
+  })
+
+  it('imports a custom JSON pack into the launcher and arms it for new runs', async () => {
+    const { user } = renderApp()
+
+    await user.upload(
+      screen.getByLabelText('Import pack JSON'),
+      new File([JSON.stringify(SAVANNAH_PACK)], 'savannah-nights.json', {
+        type: 'application/json',
+      }),
+    )
+
+    expect(await screen.findByText('Savannah Nights is ready for new runs.')).toBeTruthy()
+    expect(screen.getByText('Savannah Nights')).toBeTruthy()
+    expect(screen.getByText('Imported pack')).toBeTruthy()
+    expect(screen.getByText('New runs are currently armed for Savannah Nights.')).toBeTruthy()
   })
 
   it('continues a final-day saved run and finalizes it through the summary screen', async () => {
