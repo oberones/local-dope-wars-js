@@ -901,6 +901,16 @@ function requireStringField(record: Record<string, unknown>, field: string, cont
   return value
 }
 
+function requireHexColorField(record: Record<string, unknown>, field: string, context: string) {
+  const value = requireStringField(record, field, context)
+
+  if (!/^#[0-9a-fA-F]{6}$/.test(value)) {
+    throw new Error(`${context} "${field}" must use a 6-digit hex color.`)
+  }
+
+  return value
+}
+
 function requireNumberField(record: Record<string, unknown>, field: string, context: string) {
   const value = record[field]
 
@@ -986,11 +996,15 @@ function parseDrugDefinition(value: unknown, index: number): DrugDefinition {
   const expensive = value.expensive
   const marketEvents = value.marketEvents
 
+  if (typeof marketEvents !== 'undefined' && !Array.isArray(marketEvents)) {
+    throw new Error(`Drug ${index + 1} marketEvents must be an array when present.`)
+  }
+
   return {
     id: requireStringField(value, 'id', `Drug ${index + 1}`),
     label: requireStringField(value, 'label', `Drug ${index + 1}`),
     flavor: requireStringField(value, 'flavor', `Drug ${index + 1}`),
-    accent: requireStringField(value, 'accent', `Drug ${index + 1}`),
+    accent: requireHexColorField(value, 'accent', `Drug ${index + 1}`),
     basePrice: parsePriceBand(value.basePrice, `Drug ${index + 1} basePrice`),
     cheap:
       typeof cheap === 'undefined' ?
@@ -1207,7 +1221,7 @@ function parseContentPackDefinition(
     label: requireStringField(value, 'label', 'Content pack'),
     shortLabel: requireStringField(value, 'shortLabel', 'Content pack'),
     description: requireStringField(value, 'description', 'Content pack'),
-    accent: requireStringField(value, 'accent', 'Content pack'),
+    accent: requireHexColorField(value, 'accent', 'Content pack'),
     startingCityId,
     map: parseMapSceneDefinition(value.map, cityIds),
     cities,
@@ -1270,7 +1284,7 @@ function refreshContentPackRegistry(customPacks = readPersistedCustomContentPack
 refreshContentPackRegistry()
 
 export function listContentPacks() {
-  return CONTENT_PACKS
+  return [...CONTENT_PACKS]
 }
 
 export function listImportedContentPacks() {
