@@ -365,7 +365,7 @@ function getWeaponRating(state: GameState) {
       return total
     }
 
-    return total + item.defense * state.gear[item.id]
+    return total + item.fightPower * state.gear[item.id]
   }, 0)
 }
 
@@ -830,13 +830,51 @@ function getFightSuccessChance(state: GameState, cityCops: number, bonus = 0) {
   return Math.min(
     Math.max(
       GAME_CONFIG.encounterFightBaseChance +
-        weaponRating * GAME_CONFIG.encounterFightWeaponFactor +
+        weaponRating * GAME_CONFIG.encounterFightPowerFactor +
         defenseRating * GAME_CONFIG.encounterFightDefenseFactor -
         cityCops * GAME_CONFIG.encounterFightHeatFactor +
         bonus,
       GAME_CONFIG.encounterFightMinChance,
     ),
     GAME_CONFIG.encounterFightMaxChance,
+  )
+}
+
+function getCopFightSeizure(state: GameState, cityCops: number) {
+  const largestHolding = getLargestInventoryHolding(state)
+
+  if (!largestHolding.drugId || largestHolding.quantity <= 0) {
+    return null
+  }
+
+  const seizedQuantity = Math.min(
+    largestHolding.quantity,
+    Math.max(
+      1,
+      Math.round(
+        largestHolding.quantity *
+          (GAME_CONFIG.copStopFightStashSeizureBaseShare +
+            cityCops / GAME_CONFIG.copStopFightStashSeizureHeatDivisor),
+      ),
+    ),
+  )
+
+  return {
+    drugId: largestHolding.drugId,
+    drugLabel: largestHolding.label,
+    quantity: seizedQuantity,
+  }
+}
+
+function getJackerFightLootCash(state: GameState) {
+  const weaponRating = getWeaponRating(state)
+
+  return Math.max(
+    randomInt(
+      GAME_CONFIG.jackerFightLootCashMin,
+      GAME_CONFIG.jackerFightLootCashMax,
+    ) + weaponRating * GAME_CONFIG.jackerFightLootPowerFactor,
+    0,
   )
 }
 
@@ -855,6 +893,7 @@ export function resolvePendingEncounter(
     pendingEncounter: null,
   }
   const defenseRating = getDefenseRating(clearedState)
+  const currentCity = getCurrentCity(clearedState)
 
   switch (encounter.kind) {
     case 'cop-stop':
@@ -925,7 +964,7 @@ export function resolvePendingEncounter(
 
       {
         const fightSuccess = Math.random() <
-          getFightSuccessChance(clearedState, getCurrentCity(clearedState).cops)
+          getFightSuccessChance(clearedState, currentCity.cops)
 
         if (fightSuccess) {
           const healthLoss = Math.min(
@@ -966,17 +1005,31 @@ export function resolvePendingEncounter(
           ),
         )
         const cashLost = Math.min(clearedState.cash, Math.round(encounter.cashDemand * 0.5))
+        const seizure = getCopFightSeizure(clearedState, currentCity.cops)
         const nextState: GameState = {
           ...clearedState,
           cash: clearedState.cash - cashLost,
           health: Math.max(clearedState.health - healthLoss, 0),
+          inventory:
+            seizure ?
+              {
+                ...clearedState.inventory,
+                [seizure.drugId]:
+                  clearedState.inventory[seizure.drugId] - seizure.quantity,
+              }
+            : clearedState.inventory,
         }
 
         return applyUpdates(nextState, {
           news: [
             {
               tone: 'encounter',
-              text: locale.game.lostCopFightNews(cashLost, healthLoss),
+              text: locale.game.lostCopFightNews(
+                cashLost,
+                healthLoss,
+                seizure?.quantity ?? 0,
+                seizure?.drugLabel ?? 'stash',
+              ),
             },
           ],
           activity: [
@@ -984,7 +1037,13 @@ export function resolvePendingEncounter(
               nextState,
               'encounter',
               locale.game.lostCopFightTitle,
-              locale.game.lostCopFightDetail(encounter.cityLabel, cashLost, nextState.health),
+              locale.game.lostCopFightDetail(
+                encounter.cityLabel,
+                cashLost,
+                nextState.health,
+                seizure?.quantity ?? 0,
+                seizure?.drugLabel ?? 'stash',
+              ),
             ),
           ],
         })
@@ -1058,11 +1117,12 @@ export function resolvePendingEncounter(
         const fightSuccess = Math.random() <
           getFightSuccessChance(
             clearedState,
-            getCurrentCity(clearedState).cops,
+            currentCity.cops,
             GAME_CONFIG.jackerFightChanceBonus,
           )
 
         if (fightSuccess) {
+          const cashBonus = getJackerFightLootCash(clearedState)
           const healthLoss = Math.min(
             clearedState.health,
             getMitigatedDamage(
@@ -1072,6 +1132,7 @@ export function resolvePendingEncounter(
           )
           const nextState: GameState = {
             ...clearedState,
+            cash: clearedState.cash + cashBonus,
             health: Math.max(clearedState.health - healthLoss, 0),
           }
 
@@ -1079,7 +1140,7 @@ export function resolvePendingEncounter(
             news: [
               {
                 tone: 'encounter',
-                text: locale.game.wonJackerFightNews(healthLoss),
+                text: locale.game.wonJackerFightNews(healthLoss, cashBonus),
               },
             ],
             activity: [
@@ -1087,7 +1148,11 @@ export function resolvePendingEncounter(
                 nextState,
                 'encounter',
                 locale.game.wonJackerFightTitle,
-                locale.game.wonJackerFightDetail(encounter.cityLabel, nextState.health),
+                locale.game.wonJackerFightDetail(
+                  encounter.cityLabel,
+                  nextState.health,
+                  cashBonus,
+                ),
               ),
             ],
           })

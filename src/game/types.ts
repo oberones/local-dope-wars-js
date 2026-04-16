@@ -63,6 +63,7 @@ export interface GearItemDefinition {
   category: 'weapon' | 'armor'
   cost: number
   defense: number
+  fightPower: number
   maxOwned: number
   pawnBaseValue: number
   pawnDecayRate: number
