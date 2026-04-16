@@ -174,7 +174,7 @@ export const EN_US_LOCALE = {
     packSelectorSummary:
       'New runs use the selected pack. Saved runs keep their original setting.',
     builtInDefault: 'Built-in default',
-    alternateBundle: 'Alternate bundle',
+    importedBundle: 'Imported pack',
     selectedForNewRuns: 'Selected for new runs',
     useThisPack: 'Use this pack',
     locationsCount: (count: number) =>
@@ -182,6 +182,16 @@ export const EN_US_LOCALE = {
     startsIn: (cityLabel: string) => `Starts in ${cityLabel}`,
     packLaunchNote: (shortLabel: string, cityLabel: string) =>
       `${shortLabel} opens in ${cityLabel}.`,
+    packImportEyebrow: 'Custom packs',
+    packImportHeading: 'Import local pack JSON',
+    packImportSummary:
+      'Load a typed location pack from this browser to test alternate cities without touching gameplay rules.',
+    importPackButton: 'Import pack JSON',
+    packImportHint:
+      'Imported packs stay in this browser and join the launcher pack picker right away.',
+    packImportSuccess: (label: string) => `${label} is ready for new runs.`,
+    packImportUnknownError: 'The pack could not be imported.',
+    packImportError: (detail: string) => `Import failed: ${detail}`,
     topRunsEyebrow: 'Top runs',
     highScoresHeading: 'High scores',
     highScoresSummary: 'Best closed-out runs from this browser.',

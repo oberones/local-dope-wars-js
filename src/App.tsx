@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
+import type {
+  ChangeEvent,
+  CSSProperties,
+  KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
 import './App.css'
-import { CONTENT_PACKS, DEFAULT_CONTENT_PACK, GEAR_ITEMS, GAME_CONFIG, getContentPack } from './game/content'
+import {
+  DEFAULT_CONTENT_PACK,
+  GEAR_ITEMS,
+  GAME_CONFIG,
+  getContentPack,
+  importCustomContentPack,
+  isBuiltInContentPack,
+  listContentPacks,
+} from './game/content'
 import { DEFAULT_LOCALE } from './game/i18n'
 import { MapScene } from './components/MapScene'
 import {
@@ -276,6 +288,9 @@ function App() {
   const [selectedContentPackId, setSelectedContentPackId] = useState<ContentPackId>(
     () => loadSelectedContentPackId() ?? DEFAULT_CONTENT_PACK.id,
   )
+  const [availableContentPacks, setAvailableContentPacks] = useState<ContentPackDefinition[]>(
+    () => listContentPacks(),
+  )
   const [focusedCityId, setFocusedCityId] = useState<CityId>(
     DEFAULT_CONTENT_PACK.cities[0]?.id ?? '',
   )
@@ -285,6 +300,10 @@ function App() {
   const [financeDrafts, setFinanceDrafts] = useState(createFinanceDrafts)
   const [activeOpsVenue, setActiveOpsVenue] = useState<OpsVenue>('market')
   const [seenSpotlightNewsId, setSeenSpotlightNewsId] = useState(-1)
+  const [packImportMessage, setPackImportMessage] = useState<{
+    tone: 'success' | 'error'
+    text: string
+  } | null>(null)
   const opsTabRefs = useRef<Record<OpsVenue, HTMLButtonElement | null>>({
     market: null,
     bank: null,
@@ -473,6 +492,34 @@ function App() {
     setFinanceDraft(field, '')
   }
 
+  async function handlePackImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+
+    event.target.value = ''
+
+    if (!file) {
+      return
+    }
+
+    try {
+      const nextPack = importCustomContentPack(JSON.parse(await file.text()) as unknown)
+
+      setAvailableContentPacks(listContentPacks())
+      setSelectedContentPackId(nextPack.id)
+      setPackImportMessage({
+        tone: 'success',
+        text: locale.menu.packImportSuccess(nextPack.label),
+      })
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : locale.menu.packImportUnknownError
+
+      setPackImportMessage({
+        tone: 'error',
+        text: locale.menu.packImportError(detail),
+      })
+    }
+  }
+
   function focusOpsVenue(venue: OpsVenue) {
     opsTabRefs.current[venue]?.focus()
   }
@@ -648,7 +695,7 @@ function App() {
             </div>
 
             <div className="pack-list">
-              {CONTENT_PACKS.map((pack) => {
+              {availableContentPacks.map((pack) => {
                 const startCity = getStartingCity(pack)
                 const isSelected = pack.id === selectedContentPackId
 
@@ -668,9 +715,9 @@ function App() {
                     <div className="pack-card__top">
                       <div>
                         <p className="pack-card__eyebrow">
-                          {pack.id === DEFAULT_CONTENT_PACK.id
+                          {isBuiltInContentPack(pack.id)
                             ? locale.menu.builtInDefault
-                            : locale.menu.alternateBundle}
+                            : locale.menu.importedBundle}
                         </p>
                         <h3>{pack.label}</h3>
                       </div>
@@ -701,6 +748,33 @@ function App() {
                   )
                 : selectedContent.description}
             </p>
+
+            <div className="pack-import">
+              <div className="pack-import__copy">
+                <p className="eyebrow">{locale.menu.packImportEyebrow}</p>
+                <h3>{locale.menu.packImportHeading}</h3>
+                <p className="news-panel__summary">{locale.menu.packImportSummary}</p>
+              </div>
+
+              <label className="accent-button pack-import__button">
+                <input
+                  className="pack-import__input"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handlePackImport}
+                />
+                <span>{locale.menu.importPackButton}</span>
+              </label>
+
+              <p className="pack-import__hint">{locale.menu.packImportHint}</p>
+              {packImportMessage ? (
+                <p
+                  className={`pack-import__message pack-import__message--${packImportMessage.tone}`}
+                >
+                  {packImportMessage.text}
+                </p>
+              ) : null}
+            </div>
           </article>
 
           <article className="panel launch-card">

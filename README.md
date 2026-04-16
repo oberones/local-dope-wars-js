@@ -12,6 +12,7 @@ The current built-in content pack is set in Gwinnett County, Georgia, but the lo
 - Start new run / continue saved run flow
 - Browser-local autosave and high scores
 - Multiple bundled content packs with a launch-screen pack picker
+- Browser-local custom content-pack import from JSON
 - Finance desk with deposits, withdrawals, debt payoff, borrowing, pawn advances, and recovery
 - Pawnable defensive gear with defense rating and gear value tracking
 - Event spotlight popup windows for market shocks, collector hits, and travel encounters
@@ -87,7 +88,7 @@ make build-subpath SUBPATH_BASE=/apps/some-other-path/
 ## How To Play
 
 1. Launch the app and choose `Start new run` or `Continue saved run`.
-2. New runs start on the currently selected bundled content pack. Saved runs keep their original pack.
+2. New runs start on the currently selected content pack. Saved runs keep their original pack.
 3. Each run starts with cash, debt, limited stash space, and a market that refreshes when you travel.
 4. Travel between cities to advance the day, refresh the market, and trigger heat-based encounter risk.
 5. Buy low and sell high while watching stash space, debt growth, city heat, and special market events.
@@ -102,6 +103,7 @@ Notes:
 - Runs autosave in browser localStorage.
 - High scores are also stored locally in the browser.
 - The current built-in default content pack is Gwinnett County.
+- Imported custom packs stay local to the current browser and appear in the same launcher picker.
 - Travel encounters, collector pressure, market shocks, and gear value all feed into the current run state.
 
 ## Current Bundled Locations
@@ -110,6 +112,20 @@ Notes:
   Locations: Duluth, Suwanee, Norcross, Snellville, Lawrenceville, Lilburn, Grayson, Dacula
 - `Atlanta Intown`
   Locations: Midtown, Buckhead, Little Five, Old Fourth Ward, Decatur, West End, Summerhill, East Atlanta
+
+## Importing A Custom Pack
+
+If you already have a valid content-pack JSON file, you can import it directly from the launch screen:
+
+1. Open the `Import local pack JSON` lane in the launcher.
+2. Choose a `.json` file from your machine.
+3. The pack is validated, added to the browser-local registry, and immediately appears in the pack picker.
+
+Notes:
+
+- Imported packs are stored only in the current browser.
+- They do not replace the built-in Gwinnett default.
+- Saved runs and selected-pack state can use imported packs as long as that pack still exists in browser storage.
 
 ## Testing And Validation
 
@@ -217,7 +233,7 @@ make check
 
 ### Adding A Custom Location Pack
 
-If you want to add another bundled location pack:
+If you want to add another bundled location pack in source:
 
 1. Add or clone a pack definition in `src/game/content.ts`.
 2. Follow the typed shapes in `src/game/types.ts`, especially `ContentPackDefinition`, city definitions, drug definitions, and map scene data.
@@ -226,11 +242,13 @@ If you want to add another bundled location pack:
    - a `startingCityId`
    - `cities`, `drugs`, and `scoreTiers`
    - `map.routes`, `map.districts`, `map.arterials`, and `map.labels`
-4. Add the new pack to the exported `CONTENT_PACKS` list in `src/game/content.ts` so it appears in the launcher pack picker.
+4. Register the new pack through the content registry in `src/game/content.ts` so it appears in the launcher pack picker.
 5. Keep gameplay rules in `src/game/core.ts` unchanged unless you are intentionally adding a new mechanic. New packs should fit the existing typed content model.
 6. Run `npm run test`, `npm run lint`, and `npm run build` or just `make check`.
 
-The current bundled packs in `src/game/content.ts` are the best examples to copy when creating a new pack.
+If you want to prototype without changing source first, use the launch-screen JSON import path and shape your file to match `ContentPackDefinition`.
+
+The current bundled packs in `src/game/content.ts` are still the best examples to copy when creating a new pack.
 
 Areas that are especially helpful:
 
