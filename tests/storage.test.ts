@@ -56,6 +56,10 @@ function makeHighScore(overrides: Partial<HighScoreEntry> = {}): HighScoreEntry 
     health: 92,
     inventoryValue: 2_800,
     gearValue: 0,
+    netWorth: 5_800,
+    inventoryCloseoutPenalty: 0,
+    healthCloseoutPenalty: 0,
+    closeoutPenalty: 0,
     stashUsed: 12,
     totalSpace: 100,
     score: 5_800,
@@ -178,6 +182,10 @@ describe('storage regressions', () => {
     }
     delete (bestLegacyEntry as { pawnDebt?: number }).pawnDebt
     delete (bestLegacyEntry as { gearValue?: number }).gearValue
+    delete (bestLegacyEntry as { netWorth?: number }).netWorth
+    delete (bestLegacyEntry as { inventoryCloseoutPenalty?: number }).inventoryCloseoutPenalty
+    delete (bestLegacyEntry as { healthCloseoutPenalty?: number }).healthCloseoutPenalty
+    delete (bestLegacyEntry as { closeoutPenalty?: number }).closeoutPenalty
 
     localStorageMock.setItem(
       HIGH_SCORES_KEY,
@@ -204,6 +212,10 @@ describe('storage regressions', () => {
         ...bestLegacyEntry,
         pawnDebt: 0,
         gearValue: 0,
+        netWorth: bestLegacyEntry.score,
+        inventoryCloseoutPenalty: 0,
+        healthCloseoutPenalty: 0,
+        closeoutPenalty: 0,
       },
       makeHighScore({
         runId: 'solid-run',

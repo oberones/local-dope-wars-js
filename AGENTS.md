@@ -138,7 +138,7 @@ When asked to create a commit:
 - The current built-in content still defaults to the Gwinnett County location set.
 - A typed content-pack foundation now includes a player-facing launch-screen picker and more than one bundled starter pack.
 - A typed English locale/copy layer now exists in `src/game/i18n.ts`, but broader locale coverage and fuller copy extraction are still in progress.
-- Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, debt-collector pressure, pawnable defensive gear, and first-pass decision-based encounter flows for cops and jackers are now live, but broader combat systems are still pending.
+- Basic cops/heat-driven travel encounters, patch-up recovery, typed market event tables, bank yield, debt-collector pressure, pawnable defensive gear, weapon-aware encounter combat, and final-stretch closeout pressure are now live, but broader combat/endgame depth is still pending.
 - A typed event spotlight layer now drives popup windows for market shocks, collectors, and travel encounters, with room for future illustrated encounter art.
 - A growing Vitest regression suite now covers core content-pack, travel, market-event, finance-pressure, pawn-flow, storage/save normalization, and key browser-like app flows in `jsdom`.
 - Save/load depth, deeper pawn/bank systems, broader combat depth beyond the first decision-based encounter flows, and endgame polish are still pending.

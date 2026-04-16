@@ -205,6 +205,10 @@ export const EN_US_LOCALE = {
     bankLabel: 'Bank',
     inventoryValueLabel: 'Inventory value',
     gearValueLabel: 'Gear value',
+    netWorthLabel: 'Net worth',
+    closeoutPenaltyLabel: 'Closeout penalty',
+    inventoryPenaltyLabel: 'Unsold stash penalty',
+    healthPenaltyLabel: 'Injury penalty',
     debtLabel: 'Debt',
     pawnLabel: 'Pawn debt',
     backToLaunchBoard: 'Back to launch board',
@@ -223,6 +227,8 @@ export const EN_US_LOCALE = {
     campaignProgress: 'Campaign progress',
     finalDayNote:
       'Final day reached. You can still settle inventory and finances before closing the run.',
+    finalStretchNote: (pressure: number, projectedScore: number, penalty: number) =>
+      `${pressure}% final stretch pressure is live. Projected final score is ${formatMoney(projectedScore)} after ${formatMoney(penalty)} in closeout costs.`,
     activeRunNote: (count: number) =>
       `${count} night${count === 1 ? '' : 's'} remain before the books close. This run autosaves after each move.`,
     saveAndExit: 'Save and exit',
@@ -232,6 +238,7 @@ export const EN_US_LOCALE = {
     completeCopy:
       'Travel is locked now, but you can still liquidate the stash, work the bank, and pay debt before filing the final score.',
     currentScorePreview: 'Current score preview',
+    projectedFinalScore: 'Projected final score',
     finalizeRun: 'Finalize run',
     cashOnHand: 'Cash on hand',
     health: 'Health',
@@ -293,6 +300,8 @@ export const EN_US_LOCALE = {
     creditRemaining: 'Credit remaining',
     nextBankYield: 'Next bank yield',
     collectorRisk: 'Collector risk',
+    finalStretchPressure: 'Final stretch pressure',
+    closeoutPenalty: 'Closeout penalty',
     spotlightDismiss: 'Keep moving',
     spotlightChoice: (kind: EncounterKind, choice: EncounterChoiceId) =>
       formatEncounterChoice(kind, choice),
@@ -402,6 +411,11 @@ export const EN_US_LOCALE = {
       `Shifted operations to ${cityLabel}. Street heat is running ${cops}%.`,
     finalDayReached:
       'Final day reached. Sell off, settle your money, and finalize the run when ready.',
+    finalStretchReached:
+      'Final stretch reached. Heat and collector pressure are climbing faster now.',
+    finalStretchTitle: 'Final stretch',
+    finalStretchDetail: (cityLabel: string) =>
+      `The run is entering its last nights around ${cityLabel}. Pressure is tightening on every move.`,
     movedToTitle: (cityLabel: string) => `Moved to ${cityLabel}`,
     movedToDetail: (debt: number, day: number) =>
       `Debt rolled to ${formatMoney(debt)} and the market reset for day ${day}.`,
