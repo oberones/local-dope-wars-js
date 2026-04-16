@@ -1,0 +1,189 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+function createLocalStorageMock() {
+  const store = new Map<string, string>()
+
+  return {
+    clear() {
+      store.clear()
+    },
+    getItem(key: string) {
+      return store.get(key) ?? null
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null
+    },
+    get length() {
+      return store.size
+    },
+    removeItem(key: string) {
+      store.delete(key)
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value)
+    },
+  } satisfies Storage
+}
+
+const SAVANNAH_PACK = {
+  id: 'savannah-nights',
+  label: 'Savannah Nights',
+  shortLabel: 'Savannah',
+  description: 'Port routes, tourist spillover, and riverfront pressure after dark.',
+  accent: '#14b8a6',
+  startingCityId: 'starland',
+  map: {
+    title: 'Savannah corridor',
+    ariaLabel: 'Illustrated Savannah late-night market map',
+    routes: [
+      ['riverfront', 'starland'],
+      ['starland', 'midtown-savannah'],
+    ],
+    districts: [
+      {
+        id: 'north',
+        label: 'Riverfront',
+        subtitle: 'Tourist spill',
+        points: '18,16 74,16 70,32 22,34',
+        cityIds: ['riverfront'],
+        fill: 'rgba(20, 184, 166, 0.1)',
+      },
+      {
+        id: 'south',
+        label: 'Starland / Midtown',
+        subtitle: 'Warehouse drag',
+        points: '16,38 78,38 74,80 20,78',
+        cityIds: ['starland', 'midtown-savannah'],
+        fill: 'rgba(249, 115, 22, 0.1)',
+      },
+    ],
+    arterials: [
+      'M20 27 C34 29, 48 29, 72 27',
+      'M34 27 C34 44, 34 56, 34 74',
+      'M58 27 C58 44, 58 56, 58 74',
+    ],
+    labels: [
+      { x: 50, y: 21, text: 'River drag' },
+      { x: 50, y: 58, text: 'Warehouse lanes' },
+    ],
+  },
+  cities: [
+    {
+      id: 'riverfront',
+      label: 'Riverfront',
+      district: 'Historic district',
+      landmark: 'Bar exits and tourist drift',
+      atmosphere: 'Crowded sidewalks and easy hiding spots.',
+      signature: 'Fast late-night flips when the bars spill out.',
+      cops: 24,
+      minDrugs: 4,
+      maxDrugs: 8,
+      map: { x: 34, y: 28 },
+      tagline: 'Tourist money covers messy lanes.',
+    },
+    {
+      id: 'starland',
+      label: 'Starland',
+      district: 'Arts strip',
+      landmark: 'Converted garages and side-street bars',
+      atmosphere: 'Loose nightlife and quick handoffs between blocks.',
+      signature: 'Steady ground for mid-market movement.',
+      cops: 18,
+      minDrugs: 5,
+      maxDrugs: 9,
+      map: { x: 46, y: 51 },
+      tagline: 'Young crowds and soft eyes keep routes open.',
+    },
+    {
+      id: 'midtown-savannah',
+      label: 'Midtown',
+      district: 'Hospital corridor',
+      landmark: 'Strip malls and broad arterial cuts',
+      atmosphere: 'Long roads, routine traffic, and sudden pressure spikes.',
+      signature: 'Reliable if you can survive the patrol rhythm.',
+      cops: 32,
+      minDrugs: 4,
+      maxDrugs: 8,
+      map: { x: 58, y: 69 },
+      tagline: 'Routine traffic hides volume until it does not.',
+    },
+  ],
+  drugs: [
+    {
+      id: 'acid',
+      label: 'Acid',
+      flavor: 'Tourist strip tab run',
+      accent: '#f97316',
+      basePrice: { min: 900, max: 4000 },
+      cheap: {
+        min: 320,
+        max: 980,
+        headline: 'Riverfront promoters dumped a pocket full of tabs.',
+      },
+    },
+    {
+      id: 'weed',
+      label: 'Weed',
+      flavor: 'Steady port-city green',
+      accent: '#22c55e',
+      basePrice: { min: 180, max: 760 },
+      marketEvents: [
+        {
+          kind: 'flood',
+          modifier: 'cheap',
+          chance: 0.05,
+          min: 60,
+          max: 170,
+          headline: 'A grow-op busted loose extra weight. Weed is everywhere.',
+        },
+      ],
+    },
+  ],
+  scoreTiers: [
+    { threshold: 0, message: 'Still floating.' },
+    { threshold: 18000, message: 'Owning the river.' },
+  ],
+}
+
+describe('content pack registry', () => {
+  beforeEach(() => {
+    vi.stubGlobal('window', {
+      localStorage: createLocalStorageMock(),
+    })
+    vi.resetModules()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('imports a custom pack and reloads it from browser storage', async () => {
+    const content = await import('../src/game/content')
+
+    content.importCustomContentPack(SAVANNAH_PACK)
+
+    expect(content.hasContentPack('savannah-nights')).toBe(true)
+    expect(content.getContentPack('savannah-nights').startingCityId).toBe('starland')
+    expect(content.listContentPacks().some((pack) => pack.id === 'savannah-nights')).toBe(true)
+
+    vi.resetModules()
+
+    const reloadedContent = await import('../src/game/content')
+
+    expect(reloadedContent.hasContentPack('savannah-nights')).toBe(true)
+    expect(reloadedContent.getContentPack('savannah-nights').label).toBe('Savannah Nights')
+  })
+
+  it('rejects imported packs that try to overwrite a built-in id', async () => {
+    const content = await import('../src/game/content')
+
+    expect(() =>
+      content.importCustomContentPack({
+        ...SAVANNAH_PACK,
+        id: 'gwinnett-county',
+      }),
+    ).toThrowError(/reserved by a built-in content pack/i)
+  })
+})

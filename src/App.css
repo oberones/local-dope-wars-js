@@ -290,6 +290,10 @@
   margin: 0.95rem 0 0;
 }
 
+.launch-card__footer {
+  margin-bottom: 1.1rem;
+}
+
 .launch-screen__actions,
 .summary-screen__actions {
   display: flex;
@@ -410,6 +414,71 @@
   font-size: 0.76rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.pack-import {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(246, 235, 219, 0.08);
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(14, 21, 24, 0.86), rgba(14, 17, 19, 0.94)),
+    rgba(12, 15, 17, 0.82);
+}
+
+.pack-import__copy h3,
+.pack-import__hint,
+.pack-import__message {
+  margin: 0;
+}
+
+.pack-import__copy h3 {
+  margin-top: 0.25rem;
+}
+
+.pack-import__button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: fit-content;
+  min-width: 190px;
+}
+
+.pack-import__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pack-import__hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.pack-import__message {
+  padding: 0.7rem 0.8rem;
+  border-radius: 16px;
+  border: 1px solid rgba(246, 235, 219, 0.1);
+  background: rgba(246, 235, 219, 0.04);
+  color: var(--text);
+}
+
+.pack-import__message--success {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.pack-import__message--error {
+  border-color: rgba(248, 113, 113, 0.28);
+  background: rgba(248, 113, 113, 0.08);
 }
 
 .feature-list,
