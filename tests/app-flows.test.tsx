@@ -59,8 +59,15 @@ describe('app browser flows', () => {
     const marketPanel = await screen.findByRole('tabpanel', { name: 'Black market' })
     const bankPanelHidden = document.getElementById('ops-panel-bank') as HTMLDivElement | null
     const pawnPanelHidden = document.getElementById('ops-panel-pawn') as HTMLDivElement | null
-    expect(bankPanelHidden).toBeTruthy()
-    expect(pawnPanelHidden).toBeTruthy()
+
+    if (!bankPanelHidden) {
+      throw new Error('Expected bank panel to exist')
+    }
+
+    if (!pawnPanelHidden) {
+      throw new Error('Expected pawn panel to exist')
+    }
+
     expect(getComputedStyle(bankPanelHidden).display).toBe('none')
     expect(getComputedStyle(pawnPanelHidden).display).toBe('none')
     expect(within(marketPanel).getAllByRole('button', { name: 'Buy' }).length).toBeGreaterThan(0)
