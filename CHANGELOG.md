@@ -1,3 +1,9 @@
+## 0.10.1 (2026-04-15)
+
+### Fix
+
+- restore lane tab panel visibility
+
 ## 0.10.0 (2026-04-15)
 
 ### Feat
