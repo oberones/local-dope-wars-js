@@ -57,6 +57,12 @@ describe('app browser flows', () => {
       await screen.findByRole('tab', { name: 'Black market', selected: true }),
     ).toBeTruthy()
     const marketPanel = await screen.findByRole('tabpanel', { name: 'Black market' })
+    const bankPanelHidden = document.getElementById('ops-panel-bank') as HTMLDivElement | null
+    const pawnPanelHidden = document.getElementById('ops-panel-pawn') as HTMLDivElement | null
+    expect(bankPanelHidden).toBeTruthy()
+    expect(pawnPanelHidden).toBeTruthy()
+    expect(getComputedStyle(bankPanelHidden).display).toBe('none')
+    expect(getComputedStyle(pawnPanelHidden).display).toBe('none')
     expect(within(marketPanel).getAllByRole('button', { name: 'Buy' }).length).toBeGreaterThan(0)
     expect(within(marketPanel).queryByRole('button', { name: 'Deposit' })).toBeNull()
 
@@ -64,6 +70,7 @@ describe('app browser flows', () => {
 
     expect(await screen.findByRole('tab', { name: 'Bank', selected: true })).toBeTruthy()
     const bankPanel = await screen.findByRole('tabpanel', { name: 'Bank' })
+    expect(getComputedStyle(marketPanel).display).toBe('none')
     expect(within(bankPanel).getByRole('button', { name: 'Deposit' })).toBeTruthy()
     expect(within(bankPanel).queryByRole('button', { name: 'Patch up' })).toBeNull()
 
@@ -73,6 +80,7 @@ describe('app browser flows', () => {
       await screen.findByRole('tab', { name: 'Pawn shop', selected: true }),
     ).toBeTruthy()
     const pawnPanel = await screen.findByRole('tabpanel', { name: 'Pawn shop' })
+    expect(getComputedStyle(bankPanel).display).toBe('none')
     expect(within(pawnPanel).getByText('Patch up')).toBeTruthy()
     expect(within(pawnPanel).queryByRole('button', { name: 'Borrow' })).toBeNull()
   })
