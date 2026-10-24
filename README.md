@@ -168,7 +168,96 @@ make build-subpath
 
 When changing gameplay or UI in meaningful ways, contributors should run `lint`, `test`, and a base-path-aware build before finishing work.
 
-## Deployment Helpers
+## GHCR Publishing And Manual Hera Deployment
+
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml) verifies pull requests targeting `main`, pushes to `main`, and version-tag pushes with Node `24.22.1`, `npm ci`, lint, tests, the production build, production Compose validation, and a Docker image build. Publishing runs only after verification succeeds for a pushed release tag in `X.Y.Z` format (for example, `0.10.2`), matching Commitizen's existing `$version` tag convention. Pull requests and branch pushes run verification only. Each release publishes:
+
+- `ghcr.io/oberones/local-dope-wars-js:<version>` (for example, `:0.10.2`)
+- `ghcr.io/oberones/local-dope-wars-js:latest`
+- `ghcr.io/oberones/local-dope-wars-js:sha-<full-40-character-commit-sha>`
+
+Release-tag workflow runs share a concurrency group to prevent overlapping publications. Actions are pinned to commit SHAs, Docker builds use Buildx caching, and published images carry OCI source, revision, and version labels. Publishing uses `GITHUB_TOKEN`; only the publish job receives `packages: write`. No server credentials are needed: GitHub publishes the image, and an operator pulls it on Hera. Version bumps, changelog generation, and creating/pushing release tags remain manual release operations managed with Commitizen; the tagged commit must contain this workflow.
+
+Published images target `linux/amd64` and compile asset URLs for `/apps/local-dope-wars/`. Hera's architecture is an assumption: confirm it with `docker info --format '{{.Architecture}}'` before deploying (expect `x86_64` or `amd64`). Other architectures need a separately verified image target. The existing Dockerfile and local Compose builds still default to `/`.
+
+### First-time setup on Hera
+
+Install Docker Engine with the Compose plugin, and use an account allowed to run Docker. After the first successful publication, copy [`deploy/compose.production.yml`](deploy/compose.production.yml) to a dedicated directory on Hera as `compose.yml`, for example `/opt/local-dope-wars/compose.yml`. That directory needs only the Compose file and its `.env`; Node, source files, and a local image build are unnecessary.
+
+GHCR initially creates packages as private, and this workflow does not change visibility. For a private package, use a GitHub account with package read access and a personal access token **(classic)** with `read:packages` (authorize SSO if required). Authenticate as the same Hera account that will run Compose; enter the token at Docker's password prompt:
+
+```bash
+docker login ghcr.io --username YOUR_GITHUB_USERNAME
+```
+
+Keep registry credentials out of Compose and `.env`. If the package is deliberately made public later, anonymous pulls are supported. See [GitHub's Container registry authentication guidance](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry). If the package already existed before this workflow, ensure this repository has Actions write access to it.
+
+In the deployment directory, create `.env` with the selected tag from a successful workflow run. Replace the placeholder with the full commit SHA, not a shortened SHA:
+
+```dotenv
+IMAGE_TAG=sha-<full-40-character-commit-sha>
+LOCAL_DOPE_WARS_PORT=8081
+LOCAL_DOPE_WARS_NETWORK=web-backend
+```
+
+Persist the selected SHA tag here for repeatable updates and record the previous tag before changing it. If `IMAGE_TAG` is absent or empty, Compose defaults to `latest`. Shell environment variables override `.env`, so clear any old shell override before using the commands below.
+
+```bash
+cd /opt/local-dope-wars
+unset IMAGE_TAG
+docker network inspect web-backend >/dev/null 2>&1 || docker network create web-backend
+docker compose --env-file .env config --quiet
+docker compose --env-file .env pull local-dope-wars
+```
+
+If using a different existing proxy network or host port, retain those settings in `.env` and inspect that network instead. The reverse proxy must share the selected external network.
+
+### Replace an existing local-build container
+
+Pull the new image first, then remove the old app container before starting the new service: both configurations intentionally use the name `local-dope-wars`. From the old checkout, use its original Compose project name/options if they differ from the defaults:
+
+```bash
+docker compose --file docker-compose.yml stop local-dope-wars
+docker compose --file docker-compose.yml rm --force local-dope-wars
+```
+
+For a container originally started without Compose, use `docker stop local-dope-wars` followed by `docker rm local-dope-wars` instead. Keep the old checkout/image until acceptance. Do not start a second stack with the same container name or use the old `make docker-up` command after cutover. This replacement causes a brief outage; saves and imported packs remain in browser storage at the existing public origin.
+
+Start the pulled image from the new deployment directory:
+
+```bash
+cd /opt/local-dope-wars
+docker compose --env-file .env up --detach --no-build --wait --wait-timeout 120 local-dope-wars
+```
+
+Keep the proxy upstream `http://local-dope-wars:8080/` and the [prefix-stripping Nginx configuration below](#local-container-builds-and-proxy-configuration). Reload the proxy if it caches the replaced container's IP. The image serves files at `/`; the proxy strips `/apps/local-dope-wars/` from incoming public requests. Changing a runtime environment variable cannot change the compiled base path.
+
+### Manual updates, health checks, and rollback
+
+For each update, choose a successfully published SHA tag, record the current tag, and edit `IMAGE_TAG` in `/opt/local-dope-wars/.env`. Then run:
+
+```bash
+cd /opt/local-dope-wars
+unset IMAGE_TAG
+docker compose --env-file .env config --quiet
+docker compose --env-file .env pull local-dope-wars
+docker compose --env-file .env up --detach --no-build --wait --wait-timeout 120 local-dope-wars
+docker compose --env-file .env ps
+docker inspect --format '{{.Config.Image}} {{.State.Health.Status}}' local-dope-wars
+docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' local-dope-wars
+docker compose --env-file .env exec local-dope-wars nginx -t
+docker compose --env-file .env logs --tail=100 local-dope-wars
+curl --fail --show-error --silent -I http://127.0.0.1:8081/index.html
+curl --fail --show-error --silent https://malevolentgods.com/apps/local-dope-wars/
+```
+
+Use the configured host port if it differs from `8081`. Confirm that the inspected image tag and revision match the selected commit and health is `healthy`. Copy a generated JavaScript URL from the public HTML: it must begin `/apps/local-dope-wars/assets/` and return `200` with a JavaScript content type through the public proxy. Request the corresponding `/assets/...js` path directly on the loopback port, since that request bypasses prefix stripping. A missing asset such as `/apps/local-dope-wars/assets/does-not-exist.js` must return `404` publicly (and `/assets/does-not-exist.js` must return `404` directly). Finally, open the public page in a browser and verify both starting a new run and continuing a saved run.
+
+To roll back, set `IMAGE_TAG` in `.env` to the **previous successfully published SHA tag**, then repeat the same pull, start, and health/public/browser checks. Persisting the rollback tag prevents the next Compose invocation from silently reverting to `latest`. Keep the previous GHCR tag available until the new release is accepted.
+
+Local lint/tests/build, Compose validation, workflow linting, and container smoke tests do not establish hosted or Hera acceptance. After an authorized version-tag push, separately confirm the GitHub workflow passes and GHCR contains the version, `latest`, and expected full-SHA tags for `linux/amd64`. Hera acceptance requires the manual pull and checks above; the workflow does not connect to or deploy onto Hera.
+
+## Local Container Builds And Proxy Configuration
 
 The repository now includes container and deployment helpers for production:
 
