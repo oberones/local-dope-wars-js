@@ -29,10 +29,19 @@ This is the greenfield rebuild. The legacy Dope Wars codebase in `../gwinnett-do
 cd local-dope-wars
 ```
 
-3. Install dependencies:
+3. Select Node.js 24.22.1 with the npm version bundled with it. Node 24 is the supported development and build runtime; Node 20 and 22 are no longer supported. If you use nvm:
 
 ```bash
-npm install
+nvm install
+nvm use
+```
+
+The repository's `.nvmrc` pins the version. Other version managers should select the same Node release; no global npm upgrade is required.
+
+4. Install the dependencies recorded in the lockfile:
+
+```bash
+npm ci
 ```
 
 Or use the Makefile wrapper:
@@ -171,7 +180,65 @@ make docker-down
 make docker-logs
 ```
 
-`docker-compose.yml` joins the external Docker network `ai-backend`, so that network must already exist on the target host.
+The container follows the read-only, unprivileged Nginx pattern used in `../soundbox`:
+
+- Nginx runs as UID/GID `101:101` on container port `8080`.
+- The root filesystem is read-only, all Linux capabilities are dropped, and privilege escalation is disabled.
+- Nginx's PID and temporary files live in a 16 MiB `/tmp` tmpfs with `noexec`, `nosuid`, and `nodev`. Logs go to stdout/stderr, with Docker log rotation and a 64-process limit.
+- Only the built static app is served. The build context is limited to package manifests, source, public assets, build configuration, and Nginx configuration; local `.env*` files, Git metadata, and existing `dist/` output are excluded.
+- The published host port is restricted to loopback. Terminate public HTTPS at your reverse proxy.
+
+`docker-compose.yml` joins the external Docker network `web-backend`. Create it only if it does not already exist, then build and start the app:
+
+```bash
+docker network inspect web-backend >/dev/null 2>&1 || docker network create web-backend
+docker compose config --quiet
+docker compose build --pull
+docker compose up -d --wait
+```
+
+For a dedicated hostname or local use, Docker builds continue to default `VITE_BASE_PATH` to `/`. Open `http://127.0.0.1:8081/`. Set `LOCAL_DOPE_WARS_PORT` to change the host port, or `LOCAL_DOPE_WARS_NETWORK` to join a different existing proxy network. Compose settings can be stored in a local `.env` file; it is excluded from the build context. Pass browser build settings through explicit build arguments, not environment files copied into the image.
+
+**Existing container deployments must update their proxy upstream from port `80` to `8080`.** A containerized proxy on the shared network should use `http://local-dope-wars:8080`; a proxy running on the host should use `http://127.0.0.1:8081`. Direct access to the host port from other machines is now disabled.
+
+For the existing `/apps/local-dope-wars/` deployment, build the container with that public base path:
+
+```bash
+VITE_BASE_PATH=/apps/local-dope-wars/ docker compose build --pull
+docker compose up -d --wait
+```
+
+Add these locations to the reverse proxy's HTTPS server block (use `127.0.0.1:8081` as the upstream instead if the proxy runs on the host):
+
+```nginx
+location = /apps/local-dope-wars {
+    return 301 /apps/local-dope-wars/;
+}
+
+location /apps/local-dope-wars/ {
+    proxy_pass http://local-dope-wars:8080/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+The trailing slash on `proxy_pass` strips the public prefix before forwarding to the container. Rebuild when changing `VITE_BASE_PATH`; a runtime environment variable cannot change the compiled asset URLs. Reload the proxy after recreating the app if it caches the old container IP.
+
+Check operation with:
+
+```bash
+docker compose ps
+docker compose exec local-dope-wars nginx -t
+curl -I http://127.0.0.1:8081/index.html
+docker compose logs --tail=100 local-dope-wars
+```
+
+Also check a generated `/assets/` JavaScript URL from the served HTML: it must return `200` with a JavaScript content type, while a missing asset must return `404`. Repeat through the public URL after configuring the proxy, then verify starting and continuing a run in a browser. Saves and imported packs remain in browser storage; the container needs no persistent volume.
+
+Use Compose to apply the runtime restrictions; a bare `docker run` does not automatically apply the read-only filesystem, tmpfs, capability, or resource settings. Review the pinned Node and Nginx image versions when applying upstream security updates and rebuild with `--pull`.
+
+The app container is optional if your existing Nginx serves static files directly: build `dist/`, mount it read-only into that container, and configure the public path, asset caching, and SPA fallback there. The Compose setup above keeps the app independently deployable behind a reverse proxy.
 
 For static deployments under a subpath, build with the correct Vite base path before uploading `dist/`:
 

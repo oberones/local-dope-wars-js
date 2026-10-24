@@ -1,9 +1,19 @@
-node_modules
-dist
-.git
-.gitignore
-npm-debug.log*
-Dockerfile*
-docker-compose*.yml
-compose*.yml
-.DS_Store
+# Send only build inputs and Nginx configuration to Docker. Local environment
+# files, Git metadata, and generated output stay outside the image.
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!index.html
+!tsconfig.json
+!tsconfig.app.json
+!tsconfig.node.json
+!vite.config.ts
+!src/
+!src/**
+!public/
+!public/**
+!nginx/
+!nginx/*.conf
+**/.env*
+**/.DS_Store
