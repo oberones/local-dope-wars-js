@@ -29,10 +29,19 @@ This is the greenfield rebuild. The legacy Dope Wars codebase in `../gwinnett-do
 cd local-dope-wars
 ```
 
-3. Install dependencies:
+3. Select Node.js 24.22.1 with the npm version bundled with it. Node 24 is the supported development and build runtime; Node 20 and 22 are no longer supported. If you use nvm:
 
 ```bash
-npm install
+nvm install
+nvm use
+```
+
+The repository's `.nvmrc` pins the version. Other version managers should select the same Node release; no global npm upgrade is required.
+
+4. Install the dependencies recorded in the lockfile:
+
+```bash
+npm ci
 ```
 
 Or use the Makefile wrapper:

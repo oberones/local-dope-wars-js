@@ -538,7 +538,7 @@ function App() {
       return
     }
 
-    let nextVenue: OpsVenue | null = null
+    let nextVenue: OpsVenue
 
     switch (event.key) {
       case 'ArrowRight':

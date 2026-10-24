@@ -7,12 +7,12 @@ services:
       args:
         VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
     image: local-dope-wars:latest
-    restart: unless-stopped
+    restart: always 
     ports:
-      - "8080:80"
+      - "8081:80"
     networks:
-      - ai-backend
+      - web-backend
 
 networks:
-  ai-backend:
+  web-backend:
     external: true
