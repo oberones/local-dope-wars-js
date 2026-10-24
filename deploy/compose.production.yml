@@ -5,7 +5,7 @@ services:
     image: ghcr.io/oberones/local-dope-wars-js:${IMAGE_TAG:-latest}
     platform: linux/amd64
     container_name: local-dope-wars
-    restart: unless-stopped
+    restart: always 
     user: "101:101"
     read_only: true
     cap_drop:
