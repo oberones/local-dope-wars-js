@@ -1,3 +1,9 @@
+## 0.11.0 (2026-10-24)
+
+### Feat
+
+- add github publishing actions
+
 ## 0.10.2 (2026-10-24)
 
 ### Fix
