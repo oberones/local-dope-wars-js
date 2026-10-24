@@ -1,7 +1,7 @@
 {
   "name": "local-dope-wars",
   "private": true,
-  "version": "0.10.1",
+  "version": "0.10.2",
   "type": "module",
   "engines": {
     "node": ">=24.22.1 <25"

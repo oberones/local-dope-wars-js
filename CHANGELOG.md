@@ -1,3 +1,9 @@
+## 0.10.2 (2026-10-24)
+
+### Fix
+
+- update dependencies to latest compatible versions
+
 ## 0.10.1 (2026-04-15)
 
 ### Fix
