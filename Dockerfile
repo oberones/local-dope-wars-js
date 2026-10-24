@@ -13,12 +13,16 @@ RUN npm run build
 
 FROM nginx:1.30.6-alpine AS runtime
 
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist /srv/local-dope-wars
 
-EXPOSE 80
+USER 101:101
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/index.html || exit 1
 
-CMD ["nginx", "-g", "daemon off;"]
+# Skip upstream entrypoint scripts that attempt to modify configuration.
+ENTRYPOINT ["nginx"]
+CMD ["-g", "daemon off;"]
